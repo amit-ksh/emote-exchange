@@ -1,0 +1,25 @@
+{
+  "name": "@emote-exchange/app",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node src/server.ts --dev",
+    "start": "node src/server.ts",
+    "build": "vite build",
+    "check": "tsc -p tsconfig.json && tsc -p tsconfig.client.json",
+    "test": "node --test test/*.test.ts"
+  },
+  "dependencies": {
+    "@emote-exchange/twitch-kit": "workspace:*",
+    "react": "19.3.1",
+    "react-dom": "19.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "24.19.2",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@vitejs/plugin-react": "6.1.2",
+    "vite": "8.3.5"
+  }
+}

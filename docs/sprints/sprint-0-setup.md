@@ -29,12 +29,14 @@ Done when: install, check, lint, test and build pass; `pnpm dev:exchange` and `p
 
 Acceptance:
 
-- [ ] All local commands pass; frozen install is repeatable.
-- [ ] Dashboard and overlay load at port 4100 in development and production.
-- [ ] Overlay inspected at 1920 × 1080 and 960 × 540; background is transparent.
-- [ ] HTTP tests verify health, display snapshot, SSE and request guards.
-- [ ] CI workflow exists. GitHub execution requires a remote and push.
-- [ ] Commit `S0.2: scaffold Emote Exchange` with verification in the body.
+- [x] All local commands pass; frozen install is repeatable.
+- [x] Dashboard and overlay load at port 4100 in development and production.
+- [x] Overlay inspected at 1920 × 1080 and 960 × 540; background is transparent.
+- [x] HTTP tests verify health, display snapshot, SSE and request guards.
+- [x] CI workflow exists. GitHub execution requires a remote and push.
+- [x] Commit `S0.2: scaffold Emote Exchange` with verification in the body.
+
+Observed results and remaining external checks: [S0 verification](../verification/s0-setup.md).
 
 ## S0.3 Glossaries and recording
 

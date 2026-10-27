@@ -1,0 +1,35 @@
+{
+  "name": "emote-exchange-workspace",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@11.25.0",
+  "volta": {
+    "node": "24.22.1"
+  },
+  "devEngines": {
+    "runtime": {
+      "name": "node",
+      "version": "24.22.1",
+      "onFail": "download"
+    }
+  },
+  "engines": {
+    "node": ">=24.12.0 <25",
+    "pnpm": ">=11 <12"
+  },
+  "scripts": {
+    "dev:exchange": "pnpm --filter @emote-exchange/app dev",
+    "start:exchange": "pnpm --filter @emote-exchange/app start",
+    "build": "pnpm --filter @emote-exchange/app build",
+    "check": "pnpm -r check",
+    "lint": "biome check .",
+    "format": "biome check --write .",
+    "test": "pnpm -r --workspace-concurrency=1 test",
+    "smoke": "node scripts/smoke.mjs"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.6.3",
+    "typescript": "7.0.2"
+  }
+}

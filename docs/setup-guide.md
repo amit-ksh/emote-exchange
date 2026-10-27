@@ -6,7 +6,7 @@ Start with demo mode. Twitch credentials and OBS are needed for the later live v
 
 | Tool | Purpose | Setup |
 |---|---|---|
-| Node.js 24 LTS | Runs native TypeScript, built-in SQLite, tests and WebSocket | Install Node 24 and check `node --version`. |
+| Node.js 24.12+ in the Node 24 LTS line | Runs native TypeScript, built-in SQLite, tests and WebSocket | The workspace pins 24.22.1 for pnpm scripts; install Node 24 and check `node --version`. |
 | pnpm | Workspace dependencies and commands | Use the version pinned in the root `package.json`. |
 | Git | Task commits and source history | Install [Git](https://git-scm.com/downloads). |
 | OBS Studio | Browser-source overlay and recordings | Install [OBS Studio](https://obsproject.com/). |

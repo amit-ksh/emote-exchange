@@ -13,7 +13,7 @@ Keep `apps/emote-exchange` for market rules, runtime wiring and React screens. K
 | Concern | Choice | Reason |
 |---|---|---|
 | Runtime | Node 24 LTS, minimum 24.12 | Stable native TypeScript stripping; built-in fetch, WebSocket, tests and SQLite |
-| Workspace | pnpm, exact package-manager version and committed lockfile | Repeatable Windows-friendly setup for the app and transport package |
+| Workspace | pnpm, exact package-manager version, project-local Node runtime and committed lockfile | Repeatable Windows-friendly setup for the app and transport package |
 | HTTP | Hono + @hono/node-server | Small local HTTP surface, SSE and static files |
 | Client | React + Vite, plain CSS | Dashboard and OBS overlay from one client build; no router or chart dependency needed |
 | Development | Vite middleware in the Node server on port 4100 | One command and one origin; no competing dashboard port or CORS |
@@ -53,4 +53,4 @@ The numbered tasks in [sprints](sprints/README.md) are authoritative for individ
 
 Run `pnpm check`, `pnpm lint`, `pnpm test`, `pnpm build`, a frozen install, and development/production route checks for S0. Test HTTP behavior through public requests. Review dashboard and transparent overlay at 1920 × 1080 and 960 × 540 in a real browser. An actual OBS browser-source test remains distinct from browser screenshots.
 
-Twitch registration/credentials, live chat tests, OBS recording, a GitHub remote/CI run and Devpost submission require the streamer's accounts and tools. Track these honestly; none are necessary to run the foundation without credentials.
+Twitch registration/credentials, live chat tests, OBS recording, a GitHub remote/CI run and Devpost submission require the streamer's accounts and tools. Track these honestly; none are necessary to run the foundation without credentials. Completed foundation checks are recorded in [S0 verification](verification/s0-setup.md).

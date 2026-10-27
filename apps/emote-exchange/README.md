@@ -37,6 +37,7 @@ pnpm check
 pnpm lint
 pnpm test
 pnpm build
+pnpm smoke
 ```
 
 - Port busy: stop the other Emote Exchange process, or set matching `PORT` and `PUBLIC_ORIGIN` in `.env`.
@@ -44,5 +45,7 @@ pnpm build
 - Production client missing: run `pnpm build` first.
 - Overlay looks empty: the foundation label is at the bottom; the remaining canvas is transparent.
 - Connection interrupted: the dashboard reports SSE reconnecting. Restart the local server if needed.
+- Development: client edits update through Vite HMR; restart the command after server edits.
+- Runtime mismatch: `pnpm install` provisions the project-local Node 24 runtime; check it with `pnpm exec node --version`.
 
 Architecture and behavior: [Twitch Kit spec](../../docs/specs/twitch-kit.md), [Exchange spec](../../docs/specs/emote-exchange.md), [ADRs](../../docs/adr/), [sprints](../../docs/sprints/README.md).

@@ -1,0 +1,8 @@
+packages:
+  - apps/*
+  - packages/*
+
+strictDepBuilds: true
+engineStrict: true
+nodeVersion: 24.22.1
+saveExact: true
