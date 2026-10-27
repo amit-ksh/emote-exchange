@@ -57,4 +57,4 @@ Local screenshots and the one-off browser verification script are in ignored `ar
 - Twitch registration, OAuth, live chat and market acceptance are later tasks.
 - The CI workflow exists, but no GitHub remote, push or hosted CI run was performed.
 - Codex session evidence and Devpost submission still require the streamer's actual account actions.
-- Unrelated untracked files in `references/` were preserved and excluded from the task commit.
+- The user's UI inspiration files in `references/` were preserved locally and the folder is git-ignored.

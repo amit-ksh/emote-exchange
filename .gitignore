@@ -8,6 +8,7 @@ data/
 .cache/
 coverage/
 artifacts/
+references/
 *.log
 .DS_Store
 Thumbs.db
