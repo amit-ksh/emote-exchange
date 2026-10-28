@@ -63,16 +63,18 @@ export function createHttpApp<Display extends object>(options: HttpAppOptions<Di
       "Cache-Control": "no-store",
     }),
   );
-  app.on(
-    "HEAD",
-    "/events",
-    () =>
-      new Response(null, {
+  app.use("/events", async (context, next) => {
+    if (context.req.method === "HEAD")
+      return new Response(null, {
         headers: { "Content-Type": "text/event-stream", "Cache-Control": "no-store" },
-      }),
-  );
+      });
+    await next();
+  });
   app.get("/events", (context) => {
-    return new Response(options.bus.connect(context.req.raw.signal), {
+    const kind = context.req.query("client") ?? "dashboard";
+    if (kind !== "overlay" && kind !== "dashboard")
+      return context.json({ error: "Choose an overlay or dashboard client." }, 400);
+    return new Response(options.bus.connect(context.req.raw.signal, kind), {
       headers: {
         "Content-Type": "text/event-stream",
         "Cache-Control": "no-store",

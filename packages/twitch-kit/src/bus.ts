@@ -9,11 +9,13 @@ export type PublicSnapshot<Display extends object> = Display & {
   seq: number;
   moments: readonly PublicMoment[];
 };
+export type ClientKind = "dashboard" | "overlay";
 
 export interface OverlayBus<Display extends object> {
   snapshot(): PublicSnapshot<Display>;
   publish(display: Display, moments?: readonly PublicMoment[]): void;
-  connect(signal: AbortSignal): ReadableStream<Uint8Array>;
+  connect(signal: AbortSignal, kind?: ClientKind): ReadableStream<Uint8Array>;
+  clientCounts(): Record<ClientKind, number>;
   close(): void;
 }
 
@@ -24,6 +26,7 @@ export interface OverlayBusOptions<Display extends object> {
   maxPendingBytes?: number;
   momentLimit?: number;
   momentTtlMs?: number;
+  onClientsChange?: () => void;
 }
 
 export function createOverlayBus<Display extends object>(
@@ -57,6 +60,7 @@ export function createOverlayBus<Display extends object>(
   let cancelExpiry: (() => void) | undefined;
   const encoder = new TextEncoder();
   interface Client {
+    kind: ClientKind;
     controller: ReadableStreamDefaultController<Uint8Array>;
     sentAt: number;
     cancelFlush?: () => void;
@@ -64,6 +68,10 @@ export function createOverlayBus<Display extends object>(
     removeAbort?: () => void;
   }
   const clients = new Set<Client>();
+  const clientCounts = () => ({
+    dashboard: [...clients].filter((client) => client.kind === "dashboard").length,
+    overlay: [...clients].filter((client) => client.kind === "overlay").length,
+  });
   const snapshot = (): PublicSnapshot<Display> => {
     expire();
     return JSON.parse(JSON.stringify({ ...display, v: 1, seq, moments }));
@@ -122,6 +130,7 @@ export function createOverlayBus<Display extends object>(
     client.removeAbort?.();
     clients.delete(client);
     if (close) client.controller.close();
+    if (!closed) options.onClientsChange?.();
   }
 
   function ping(client: Client) {
@@ -134,6 +143,7 @@ export function createOverlayBus<Display extends object>(
 
   return {
     snapshot,
+    clientCounts,
     publish(next, added = []) {
       if (closed) throw new Error("Overlay bus is closed.");
       const currentTime = options.now();
@@ -164,7 +174,7 @@ export function createOverlayBus<Display extends object>(
       seq += 1;
       for (const client of clients) queue(client);
     },
-    connect(signal) {
+    connect(signal, kind = "dashboard") {
       let current: Client | undefined;
       return new ReadableStream<Uint8Array>(
         {
@@ -173,12 +183,13 @@ export function createOverlayBus<Display extends object>(
               controller.close();
               return;
             }
-            current = { controller, sentAt: options.now() };
+            current = { controller, kind, sentAt: options.now() };
             clients.add(current);
             const client = current;
             const onAbort = () => remove(client, true);
             signal.addEventListener("abort", onAbort, { once: true });
             current.removeAbort = () => signal.removeEventListener("abort", onAbort);
+            options.onClientsChange?.();
             if (enqueue(current, `event: snapshot\ndata: ${JSON.stringify(snapshot())}\n\n`))
               ping(current);
           },

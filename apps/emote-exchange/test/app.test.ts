@@ -5,6 +5,82 @@ import { join } from "node:path";
 import test from "node:test";
 import { createExchangeRuntime } from "../src/app.ts";
 
+test("overlay checklist counts only overlay SSE clients and reconnects with a fresh snapshot", async (t) => {
+  const runtime = createExchangeRuntime();
+  t.after(() => runtime.close());
+  const headers = { Host: "localhost:4100" };
+  const snapshot = async () =>
+    (await runtime.app.request("http://localhost:4100/api/snapshot", { headers })).json();
+  const connect = async (kind: string) => {
+    const abort = new AbortController();
+    const response = await runtime.app.request(
+      new Request(`http://localhost:4100/events?client=${kind}`, { headers, signal: abort.signal }),
+    );
+    const reader = response.body?.getReader();
+    assert.ok(reader);
+    const frame = new TextDecoder().decode((await reader.read()).value);
+    assert.match(frame, /^event: snapshot/);
+    return { abort, reader, snapshot: JSON.parse(frame.split("\n")[1].slice(6)) };
+  };
+  assert.equal(
+    (await runtime.app.request("http://localhost:4100/events?client=other", { headers })).status,
+    400,
+  );
+  const head = await runtime.app.request("http://localhost:4100/events?client=overlay", {
+    method: "HEAD",
+    headers,
+  });
+  assert.equal(head.status, 200);
+  assert.equal((await snapshot()).overlayClients, 0);
+  const dashboard = await connect("dashboard");
+  assert.equal(dashboard.snapshot.overlayClients, 0);
+  const first = await connect("overlay");
+  const second = await connect("overlay");
+  assert.equal(first.snapshot.overlayClients, 1);
+  assert.equal(second.snapshot.overlayClients, 2);
+  assert.equal((await snapshot()).overlayClients, 2);
+  first.abort.abort();
+  await second.reader.cancel();
+  assert.equal((await snapshot()).overlayClients, 0);
+  const next = await connect("overlay");
+  assert.equal(next.snapshot.overlayClients, 1);
+  assert.ok(next.snapshot.seq > first.snapshot.seq);
+  assert.equal(next.snapshot.eventsub.streamStatus, "unknown");
+  const actionHeaders = {
+    ...headers,
+    Origin: "http://localhost:4100",
+    "X-CTA": "1",
+    "Content-Type": "application/json",
+  };
+  const config = { ...next.snapshot.simulator.config, scenario: "opening-day" };
+  assert.equal(
+    (
+      await runtime.app.request("http://localhost:4100/api/sim/start", {
+        method: "POST",
+        headers: actionHeaders,
+        body: JSON.stringify(config),
+      })
+    ).status,
+    200,
+  );
+  assert.equal(
+    (await snapshot()).eventsub.streamStatus,
+    "unknown",
+    "simulated bells cannot mark Twitch online",
+  );
+  next.abort.abort();
+  dashboard.abort.abort();
+  assert.equal((await snapshot()).overlayClients, 0);
+  runtime.close();
+  const restarted = createExchangeRuntime();
+  t.after(() => restarted.close());
+  const packet = await (
+    await restarted.app.request("http://localhost:4100/api/snapshot", { headers })
+  ).json();
+  assert.equal(packet.seq, 0);
+  assert.equal(packet.overlayClients, 0);
+});
+
 test("Twitch configuration exposes only safe state and disconnect remains guarded", async (t) => {
   const runtime = createExchangeRuntime({
     clientId: "private-test-id",
@@ -74,6 +150,7 @@ test("Exchange exposes an honest foundation-only display snapshot", async (conte
     phase: "foundation",
     simulatorRunning: false,
     overlayUrl: "http://127.0.0.1:4100/overlay",
+    overlayClients: 0,
     connectionChecks: 0,
     moments: [],
     chatOut: { quiet: false, pending: 0, sending: false, sender: null, logs: [] },
@@ -84,6 +161,7 @@ test("Exchange exposes an honest foundation-only display snapshot", async (conte
       eventCount: 0,
       chatMessageCount: 0,
       issue: null,
+      streamStatus: "unknown",
       subscriptions: [
         "channel.chat.message",
         "channel.follow",

@@ -4,6 +4,7 @@ import type { FoundationSnapshot } from "../../src/public-state.ts";
 import { ChatOutPanel, readChatOut } from "./chat-out.tsx";
 import { EmoteCatalogPanel, readCatalog } from "./emotes.tsx";
 import { EventSubPanel, readEventSub } from "./eventsub.tsx";
+import { OverlayUrlPanel, SetupChecklist } from "./setup.tsx";
 import { readSimulator, SimulatorPanel } from "./simulator.tsx";
 import "./styles.css";
 
@@ -52,6 +53,8 @@ function readSnapshot(value: unknown): FoundationSnapshot | null {
     candidate.phase !== "foundation" ||
     typeof candidate.simulatorRunning !== "boolean" ||
     typeof candidate.overlayUrl !== "string" ||
+    !Number.isSafeInteger(candidate.overlayClients) ||
+    (candidate.overlayClients as number) < 0 ||
     !Number.isSafeInteger(candidate.connectionChecks) ||
     (candidate.connectionChecks as number) < 0 ||
     !Array.isArray(candidate.moments) ||
@@ -89,6 +92,7 @@ function readSnapshot(value: unknown): FoundationSnapshot | null {
     phase: "foundation",
     simulatorRunning: candidate.simulatorRunning,
     overlayUrl: candidate.overlayUrl,
+    overlayClients: candidate.overlayClients as number,
     connectionChecks: candidate.connectionChecks as number,
     auth,
     eventsub,
@@ -171,7 +175,7 @@ function Wordmark() {
   );
 }
 
-function TwitchConnection({ auth }: { auth: FoundationSnapshot["auth"] | undefined }) {
+function ConnectionPanel({ auth }: { auth: FoundationSnapshot["auth"] | undefined }) {
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState(false);
   const result = new URLSearchParams(window.location.search).get("auth");
@@ -256,7 +260,6 @@ function measureOverlayScale() {
 
 function Dashboard() {
   const { snapshot, status } = useFoundation("dashboard");
-  const [copyStatus, setCopyStatus] = useState<"idle" | "copied" | "failed">("idle");
   const [checkStatus, setCheckStatus] = useState<"idle" | "checking" | "success" | "failed">(
     "idle",
   );
@@ -268,15 +271,6 @@ function Dashboard() {
     connected: "Receiving local updates",
     reconnecting: "Reconnecting to local server",
   }[status];
-
-  async function copyOverlayUrl() {
-    try {
-      await navigator.clipboard.writeText(overlayUrl);
-      setCopyStatus("copied");
-    } catch {
-      setCopyStatus("failed");
-    }
-  }
 
   async function checkLocalConnection() {
     setCheckStatus("checking");
@@ -372,75 +366,20 @@ function Dashboard() {
           </aside>
         </section>
 
+        <SetupChecklist snapshot={snapshot} current={status === "connected"} />
+        <OverlayUrlPanel
+          url={overlayUrl}
+          clients={snapshot?.overlayClients ?? 0}
+          current={status === "connected"}
+        />
         <SimulatorPanel simulator={snapshot?.simulator} demo={snapshot?.mode !== "live"} />
-        <TwitchConnection auth={snapshot?.auth} />
+        <ConnectionPanel auth={snapshot?.auth} />
         <EventSubPanel connection={snapshot?.eventsub} />
         <EmoteCatalogPanel catalog={snapshot?.catalog} />
         <ChatOutPanel
           output={snapshot?.chatOut}
           connected={snapshot?.auth.broadcaster.connected ?? false}
         />
-        <section className="overlay-setup" aria-labelledby="overlay-title">
-          <div className="section-heading">
-            <div>
-              <p className="eyebrow">YOUR STREAM, YOUR EXCHANGE</p>
-              <h2 id="overlay-title">Make room in OBS.</h2>
-            </div>
-            <a className="button button-primary" href={overlayUrl} target="_blank" rel="noreferrer">
-              Open overlay <span aria-hidden="true">↗</span>
-            </a>
-          </div>
-
-          <div className="overlay-details">
-            <div className="overlay-url-block">
-              <label htmlFor="overlay-url">Browser source URL</label>
-              <div className="url-control">
-                <input
-                  id="overlay-url"
-                  type="text"
-                  value={overlayUrl}
-                  readOnly
-                  spellCheck={false}
-                  onFocus={(event) => event.currentTarget.select()}
-                />
-                <button className="button button-secondary" type="button" onClick={copyOverlayUrl}>
-                  {copyStatus === "copied" ? "Copied" : "Copy URL"}
-                </button>
-              </div>
-              <p className="copy-feedback" role="status">
-                {copyStatus === "copied"
-                  ? "OBS URL copied to your clipboard."
-                  : copyStatus === "failed"
-                    ? "Clipboard unavailable. Select the URL above and copy it manually."
-                    : "Add a Browser source in OBS and paste this URL."}
-              </p>
-            </div>
-            <dl className="canvas-specs">
-              <div>
-                <dt>Canvas</dt>
-                <dd>1920 × 1080</dd>
-              </div>
-              <div>
-                <dt>Background</dt>
-                <dd>Transparent</dd>
-              </div>
-              <div>
-                <dt>Source</dt>
-                <dd>Local browser</dd>
-              </div>
-            </dl>
-          </div>
-          <div className="foundation-note">
-            <span className="note-marker" aria-hidden="true">
-              i
-            </span>
-            <p>
-              The overlay currently shows a foundation label. Market widgets arrive in the next
-              build.
-            </p>
-          </div>
-        </section>
-
         <section className="build-next" aria-labelledby="next-title">
           <div className="next-intro">
             <h2 id="next-title">Next on the floor.</h2>

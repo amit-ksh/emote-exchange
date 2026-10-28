@@ -109,11 +109,13 @@ export function createExchangeRuntime({
       chatOut: chatOut.publicState(),
       catalog: catalog.publicState(),
       simulator: simulator.publicState(),
+      overlayClients: 0,
     };
     if (!Number.isSafeInteger(projection.connectionChecks) || projection.connectionChecks < 0) {
       throw new Error("Stored local connection check count is invalid.");
     }
     const bus = createOverlayBus({
+      onClientsChange: () => publishState(),
       initial: projection,
       now,
       schedule(callback, delayMs) {
@@ -129,6 +131,7 @@ export function createExchangeRuntime({
     );
     const display = (): FoundationDisplay => ({
       ...projection,
+      overlayClients: bus.clientCounts().overlay,
       mode: auth.publicState().broadcaster.connected ? "live" : "demo",
       connectionChecks: settings.get("connectionChecks"),
       auth: auth.publicState(),

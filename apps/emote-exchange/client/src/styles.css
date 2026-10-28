@@ -368,6 +368,66 @@ p {
 .overlay-setup + .overlay-setup {
   margin-top: 24px;
 }
+.setup-checklist h2 {
+  margin-top: 10px;
+  font-size: 28px;
+  font-weight: 550;
+}
+.setup-steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.setup-steps li {
+  display: flex;
+  align-items: start;
+  gap: 16px;
+  padding: 20px 0;
+  border-top: 1px solid var(--line);
+}
+.setup-step-mark {
+  flex: 0 0 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border: 1px solid #667769;
+  border-radius: 50%;
+  font: 500 13px var(--mono);
+}
+.setup-step-mark--done {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--ink);
+}
+.setup-steps h3 {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 20px;
+  align-items: center;
+  font-size: 16px;
+}
+.setup-step-state {
+  color: var(--muted);
+  font: 400 11px var(--mono);
+}
+.setup-steps p,
+.obs-settings {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.7;
+}
+.setup-steps p {
+  margin-top: 8px;
+}
+.obs-settings {
+  padding-left: 20px;
+}
+.obs-settings :where(li + li) {
+  margin-top: 8px;
+}
+h2[id] {
+  scroll-margin-top: 24px;
+}
 .local-check p {
   margin-top: 10px;
   font-size: 12px;

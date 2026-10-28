@@ -1,6 +1,6 @@
 # Emote Exchange
 
-A local play-money emote market for Twitch, displayed through an OBS browser source. K1–K6 are implemented: SQLite storage, guarded actions, bounded SSE, Twitch sign-in, incoming events, queued chat sending, cached emote catalogs and the seeded simulator. The final setup checklist and market rules remain in [the implementation plan](../../docs/implementation-plan.md).
+A local play-money emote market for Twitch, displayed through an OBS browser source. K1–K7 are implemented: SQLite storage, guarded actions, bounded SSE, Twitch sign-in, incoming events, queued chat sending, cached emote catalogs and the seeded simulator. Market rules remain in [the implementation plan](../../docs/implementation-plan.md).
 
 ## Run the foundation
 
@@ -27,6 +27,14 @@ Use **Test local connection** on the dashboard to verify a guarded action, a sav
 ## OBS
 
 Add a Browser Source at `http://127.0.0.1:4100/overlay`, width 1920, height 1080. The page background is transparent. Keep shutdown-when-hidden and refresh-on-activation off. The current overlay is a foundation label with a SIM badge while simulation runs; market widgets arrive in E4.
+
+## Setup checklist
+
+The dashboard groups the connection, overlay URL, simulator and chat-output panels under an automatic checklist. **Connect Twitch** completes when broadcaster auth is connected. **Overlay connected** completes when at least one overlay browser receives SSE updates, including a normal preview tab; this does not prove OBS is configured. Closing the last overlay clears it.
+
+**Go live** completes after Twitch reports `stream.online` and clears after `stream.offline`. It starts unknown after app startup, an account change or an EventSub gap, until another stream event arrives. Starting the app during an already-running stream may leave it waiting. Simulated bells never tick this live step. Without a current local connection, checklist steps wait until a fresh snapshot arrives; reconnects recover automatically, including after server restart.
+
+Use **Copy URL** in the overlay panel and paste into an OBS Browser source. Keep **Shutdown source when not visible** and **Refresh browser when scene becomes active** off. Enable **Control audio via OBS** when testing implemented sound cues. Check placement over bright and dark scenes at full and half scale.
 
 ## Twitch sign-in
 

@@ -22,6 +22,56 @@ class Socket extends EventTarget {
   }
 }
 const settle = () => new Promise((resolve) => setImmediate(resolve));
+test("stream status uses Twitch bells, stays unknown at connection and resets after gaps or auth changes", async (t) => {
+  const sockets: Socket[] = [];
+  let connected = true;
+  const runtime = createEventSub({
+    clientId: "client",
+    autoTick: false,
+    now: () => 1000,
+    auth: {
+      identity: () => (connected ? "100" : undefined),
+      accessToken: () => "secret",
+      refresh: async () => {},
+      invalidate: () => {},
+    },
+    createSocket: () => {
+      const socket = new Socket();
+      sockets.push(socket);
+      return socket;
+    },
+    fetcher: async () => Response.json({ data: [{ status: "enabled" }] }, { status: 202 }),
+  });
+  t.after(() => runtime.close());
+  assert.equal(runtime.publicState().streamStatus, "unknown");
+  runtime.syncAuth();
+  sockets[0].receive(welcome);
+  await settle();
+  assert.equal(runtime.publicState().streamStatus, "unknown");
+  const bell = (kind: "online" | "offline", id: string, broadcaster = "100") => ({
+    metadata: {
+      message_id: id,
+      message_type: "notification",
+      message_timestamp: "2026-10-28T00:00:00Z",
+    },
+    payload: {
+      subscription: { type: `stream.${kind}` },
+      event: { broadcaster_user_id: broadcaster },
+    },
+  });
+  sockets[0].receive(bell("online", "foreign", "other"));
+  assert.equal(runtime.publicState().streamStatus, "unknown");
+  sockets[0].receive(bell("online", "open"));
+  assert.equal(runtime.publicState().streamStatus, "online");
+  sockets[0].receive(bell("offline", "close"));
+  assert.equal(runtime.publicState().streamStatus, "offline");
+  sockets[0].receive(bell("online", "open-again"));
+  sockets[0].dispatchEvent(new Event("error"));
+  assert.equal(runtime.publicState().streamStatus, "unknown");
+  connected = false;
+  runtime.syncAuth();
+  assert.equal(runtime.publicState().streamStatus, "unknown");
+});
 test("disconnect cancels subscriptions and late unauthorized responses cannot refresh or restore state", async (t) => {
   const socket = new Socket();
   const finish: ((response: Response) => void)[] = [];

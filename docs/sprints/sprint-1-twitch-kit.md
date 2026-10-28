@@ -95,7 +95,7 @@ Done when tests pass and the dashboard lists the emote counts per provider for m
 
 ## K6 Simulator and demo mode
 
-**Complete — October 28, 2026.** Seeded event generation, seven presets, guarded controls, independent counters and SIM badges work in demo and live-connected operation. A temporary app copy without `.env` and with fetch blocked passed the Start demo walkthrough. Mixed-source follow/raid/bell output produced only local previews and zero Twitch sends. The virtual Soak input test emitted 120,000 messages with fixed participants; market outcomes remain Sprint 2 work. See [K6 verification](../verification/k6-simulator.md). K7 remains pending.
+**Complete — October 28, 2026.** Seeded event generation, seven presets, guarded controls, independent counters and SIM badges work in demo and live-connected operation. A temporary app copy without `.env` and with fetch blocked passed the Start demo walkthrough. Mixed-source follow/raid/bell output produced only local previews and zero Twitch sends. The virtual Soak input test emitted 120,000 messages with fixed participants; market outcomes remain Sprint 2 work. See [K6 verification](../verification/k6-simulator.md). K7 completion is recorded below.
 
 ```text
 Read docs/specs/twitch-kit.md sections 16 (Simulator) and 18 (Demo mode), and ADR 0008. Task K6.
@@ -107,6 +107,8 @@ Done when tests pass and, with .env removed and network unavailable, Emote Excha
 ```
 
 ## K7 Dashboard panels
+
+**Complete — October 28, 2026.** The four platform panels work in demo and live-connected modes. The setup checklist follows broadcaster auth, active overlay SSE connections and Twitch stream events. Overlay abort/cancel/backpressure cleanup and a HEAD-request counting bug are covered by tests. Copy URL, keyboard quiet-mode control, offline full/half overlay checks and browser recovery after a server restart passed. Actual OBS and a real stream-online transition remain later manual checks. See [K7 verification](../verification/k7-dashboard.md).
 
 ```text
 Read docs/specs/twitch-kit.md section 17. Task K7.

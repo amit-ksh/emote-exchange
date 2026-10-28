@@ -2,6 +2,48 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { createOverlayBus } from "../src/bus.ts";
 
+test("client counts distinguish overlays and clean up abort, cancel, slow clients and shutdown", async () => {
+  const clock = fakeClock();
+  const changes: number[] = [];
+  const bus = createOverlayBus({
+    initial: { text: "" },
+    ...clock,
+    maxPendingBytes: 350,
+    onClientsChange: (): void => {
+      changes.push(bus.clientCounts().overlay);
+    },
+  });
+  assert.deepEqual(bus.clientCounts(), { dashboard: 0, overlay: 0 });
+  const aborted = new AbortController();
+  aborted.abort();
+  bus.connect(aborted.signal, "overlay");
+  assert.equal(changes.length, 0);
+  const dashboard = bus.connect(new AbortController().signal, "dashboard").getReader();
+  const abort = new AbortController();
+  const overlay = bus.connect(abort.signal, "overlay").getReader();
+  await dashboard.read();
+  await overlay.read();
+  assert.deepEqual(bus.clientCounts(), { dashboard: 1, overlay: 1 });
+  abort.abort();
+  assert.equal(bus.clientCounts().overlay, 0);
+  const slow = bus.connect(new AbortController().signal, "overlay").getReader();
+  await slow.read();
+  for (let i = 0; i < 2; i++) {
+    bus.publish({ text: "🙂".repeat(60) });
+    clock.advance(100);
+    await dashboard.read();
+  }
+  assert.equal(bus.clientCounts().overlay, 0);
+  await slow.cancel();
+  await dashboard.cancel();
+  assert.deepEqual(bus.clientCounts(), { dashboard: 0, overlay: 0 });
+  const remaining = bus.connect(new AbortController().signal, "overlay").getReader();
+  await remaining.read();
+  bus.close();
+  assert.deepEqual(bus.clientCounts(), { dashboard: 0, overlay: 0 });
+  assert.ok(changes.includes(1) && changes.includes(0));
+});
+
 test("closing the bus releases pending work and prevents new connections or publications", async () => {
   const clock = fakeClock();
   const bus = createOverlayBus({ initial: { value: 1 }, ...clock });

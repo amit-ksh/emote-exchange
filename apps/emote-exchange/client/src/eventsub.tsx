@@ -15,6 +15,7 @@ export function readEventSub(value: unknown): EventSubPublicState | null {
     value === null || (typeof value === "number" && Number.isFinite(value) && value >= 0);
   if (
     !(["disconnected", "connecting", "connected", "lost"] as unknown[]).includes(source.status) ||
+    !["unknown", "online", "offline"].includes(source.streamStatus as string) ||
     !timestamp(source.sessionStartedAt) ||
     !timestamp(source.lastEventAt) ||
     !Number.isSafeInteger(source.eventCount) ||
@@ -46,6 +47,7 @@ export function readEventSub(value: unknown): EventSubPublicState | null {
     eventCount: source.eventCount as number,
     chatMessageCount: source.chatMessageCount as number,
     issue: source.issue as EventSubPublicState["issue"],
+    streamStatus: source.streamStatus as EventSubPublicState["streamStatus"],
     subscriptions,
   };
 }

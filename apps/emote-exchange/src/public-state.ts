@@ -13,6 +13,7 @@ export interface FoundationDisplay {
   phase: "foundation";
   simulatorRunning: boolean;
   overlayUrl: string;
+  overlayClients: number;
   connectionChecks: number;
   auth: AuthPublicState;
   eventsub: EventSubPublicState;

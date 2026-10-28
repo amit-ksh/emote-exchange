@@ -83,6 +83,7 @@ try {
     phase: "foundation",
     simulatorRunning: false,
     overlayUrl: `${origin}/overlay`,
+    overlayClients: 0,
     connectionChecks: 0,
     moments: [],
     chatOut: { quiet: false, pending: 0, sending: false, sender: null, logs: [] },
@@ -93,6 +94,7 @@ try {
       eventCount: 0,
       chatMessageCount: 0,
       issue: null,
+      streamStatus: "unknown",
       subscriptions: [
         "channel.chat.message",
         "channel.follow",
@@ -160,6 +162,27 @@ try {
   } finally {
     controller.abort();
   }
+  assert.equal((await fetch(`${origin}/events?client=unknown`)).status, 400);
+  assert.equal((await fetch(`${origin}/events?client=overlay`, { method: "HEAD" })).status, 200);
+  assert.equal((await (await fetch(`${origin}/api/snapshot`)).json()).overlayClients, 0);
+  const overlayAbort = new AbortController();
+  try {
+    const response = await fetch(`${origin}/events?client=overlay`, {
+      signal: overlayAbort.signal,
+    });
+    const reader = response.body.getReader();
+    const frame = new TextDecoder().decode((await reader.read()).value);
+    assert.equal(JSON.parse(frame.split("\n")[1].slice(6)).overlayClients, 1);
+    assert.equal((await (await fetch(`${origin}/api/snapshot`)).json()).overlayClients, 1);
+    await reader.cancel();
+  } finally {
+    overlayAbort.abort();
+  }
+  for (let attempt = 0; attempt < 40; attempt++) {
+    if ((await (await fetch(`${origin}/api/snapshot`)).json()).overlayClients === 0) break;
+    await delay(50);
+  }
+  assert.equal((await (await fetch(`${origin}/api/snapshot`)).json()).overlayClients, 0);
   const action = (path, body) =>
     fetch(`${origin}/api/sim/${path}`, {
       method: "POST",
@@ -200,7 +223,7 @@ try {
   assert.equal((await action("stop")).status, 200);
   assert.equal((await (await fetch(`${origin}/api/snapshot`)).json()).simulatorRunning, false);
   console.log(
-    "Production smoke passed: dashboard, overlay, demo assets, simulator counters/previews, persisted action, SSE and guards.",
+    "Production smoke passed: dashboard, overlay client lifecycle, demo assets, simulator counters/previews, persisted action, SSE and guards.",
   );
 } finally {
   if (child.exitCode === null && child.signalCode === null) {

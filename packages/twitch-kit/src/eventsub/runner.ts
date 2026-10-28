@@ -26,6 +26,7 @@ export interface EventSubPublicState {
   eventCount: number;
   chatMessageCount: number;
   issue: "protocol-error" | null;
+  streamStatus: "unknown" | "online" | "offline";
   subscriptions: SubscriptionState[];
 }
 export function eventSubEndpoints(
@@ -96,6 +97,7 @@ export function createEventSub(options: RunnerOptions) {
   let chatMessageCount = 0;
   let lastEventAt: number | null = null;
   let issue: EventSubPublicState["issue"] = null;
+  let streamStatus: EventSubPublicState["streamStatus"] = "unknown";
   let subscriptions: SubscriptionState[] = types.map((type) => ({
     type,
     status: "disconnected",
@@ -109,6 +111,7 @@ export function createEventSub(options: RunnerOptions) {
       eventCount,
       chatMessageCount,
       issue,
+      streamStatus,
       subscriptions,
     });
   let previousProjection = JSON.stringify(publicState());
@@ -120,6 +123,7 @@ export function createEventSub(options: RunnerOptions) {
     }
   };
   function stop() {
+    streamStatus = "unknown";
     generation++;
     for (const controller of controllers) controller.abort();
     controllers.clear();
@@ -250,6 +254,8 @@ export function createEventSub(options: RunnerOptions) {
         wasSent: options.wasSent,
       });
       if (!event) return;
+      if (event.type === "StreamOnline") streamStatus = "online";
+      if (event.type === "StreamOffline") streamStatus = "offline";
       eventCount++;
       if (event.type === "ChatMessage") chatMessageCount++;
       lastEventAt = event.at;
@@ -261,6 +267,7 @@ export function createEventSub(options: RunnerOptions) {
     const next = stepProtocol(state, input, now());
     state = next.state;
     if (state.status === "lost" && before !== "lost") {
+      streamStatus = "unknown";
       generation++;
       for (const controller of controllers) controller.abort();
       subscriptions = types.map((type) => ({ type, status: "disconnected", httpStatus: null }));

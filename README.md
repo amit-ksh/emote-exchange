@@ -6,7 +6,7 @@ This repository focuses on one Codex x TwitchCon hackathon entry. The plan is to
 
 ## Status
 
-The single-app plan, local foundation and K1–K6 are complete: private SQLite storage, guarded HTTP actions, bounded SSE, Twitch OAuth, incoming events, queued chat sending, cached emote catalogs and a seeded simulator with 24 original offline assets. Live reception, chat sending, 7TV and keyless offline simulation are verified. The final setup checklist, market rules and complete overlay remain in [the sprint plan](docs/sprints/README.md).
+The single-app plan, local foundation and K1–K7 are complete: private SQLite storage, guarded HTTP actions, bounded SSE, Twitch OAuth, incoming events, queued chat sending, cached emote catalogs and a seeded simulator with 24 original offline assets. Live reception, chat sending, 7TV and keyless offline simulation are verified. Market rules and the complete overlay remain in [the sprint plan](docs/sprints/README.md).
 
 ## Quick start
 
