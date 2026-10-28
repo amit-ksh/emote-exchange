@@ -47,6 +47,7 @@ Primary references reviewed: [Node TypeScript](https://nodejs.org/docs/latest-v2
 | K1–K7 | Twitch Kit | Auth, reconnects, emote catalog, chat-out queue, store and seeded simulator work through normalized events, including failure paths |
 | E0–E3 | Pure market and trading | Deterministic fixtures, integer Coins, IPO/Heat/fills/bonuses/halts/recovery pass the spec's P0 checks |
 | E4–E6 | Market overlay, controls, tuning | All P0 scenarios work end to end in demo and live modes; overlay checked at full/half OBS scale |
+| E7–E9 (P1) | Greetings and streaks, broadcaster Grants, Live analytics | Queued after P0; E8 and E9 require E5. Schedule E9 after E7/E8 for reward accounting and Greeting streak verification. Each task retains its own tests and visual acceptance gate. |
 | H/V | Harden, record, submit | Live/OBS acceptance recorded, fresh-clone demo works, submission evidence reflects actual implementation |
 
 The numbered tasks in [sprints](sprints/README.md) are authoritative for individual work items. S0 setup is a foundation, not a working market: do not show invented balances, working login controls or a Start demo button until their behavior exists.

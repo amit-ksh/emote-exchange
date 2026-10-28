@@ -96,6 +96,87 @@ Register Opening day, Pump and dump, Solo spammer, Raid wave, Quiet market and S
 Done when all scenario tests and retention checks pass, the reference-machine performance result is recorded, and full/half-scale overlay checks are recorded.
 ```
 
+## E7 Greetings and streaks (P1)
+
+**Queued — not implemented.** Complete the P0 dashboard and scenario work first. The following owner-provided task rules take precedence over section 5.11 if they differ. During implementation, do not edit anything under `docs/` or any `GLOSSARY.md`; the owner updates planning documents separately.
+
+```text
+Task E7: Greetings and streaks (P1). Read AGENTS.md, docs/specs/emote-exchange.md sections 5.1, 5.2, 5.6, 6, 10, 11 and 12, apps/emote-exchange/GLOSSARY.md, and ADRs 0006 and 0008. Do not edit anything under docs/ or GLOSSARY.md; the owner updates the plan docs separately. If the spec already has section 5.11 and it differs from the rules below, these rules win.
+
+Add to the pure engine (apps/emote-exchange/src/engine), test first:
+
+- Stream: one broadcast night. An opening Bell starts a new Stream unless the previous Stream Session ended less than STREAM_RESTART_GAP = 2 h earlier (its closing Bell, or its last tick if it never closed). A dropped stream or an app restart therefore continues the same Stream. The demo-mode Open bell button always starts a new Stream so streaks can be shown. Store stream_no on the session row and in the engine checkpoint.
+- Command !greetings <words>: needs at least one word after the command. The words are never judged, stored, echoed in a reply, broadcast, or shown on the overlay. Only the fact of a greeting is used.
+- Window: a claim needs an open Stream Session and a Trader who is not frozen. One claim per Trader per Stream. A repeat in the same Stream changes nothing and gets one reply.
+- Streak: consecutive Streams with a claim. A first claim, or a claim after skipping at least one whole Stream, sets 1. A claim in the Stream right after the last claim adds 1.
+- Bonus = GREETING_BASE + GREETING_STREAK_STEP * (min(Streak, GREETING_STREAK_CAP) - 1), defaults 50, 10, 10 (50 at Streak 1, 100 at 6, 140 from 10), in the validated settings object. Integer Coins, saturating at the Coin cap.
+- Shown Streak: shown only while alive, meaning the last claim was in the current Stream or the one before. After a whole Stream with no claim it is hidden and the next claim restarts at 1.
+- A greeting is a command, so it adds no Heat and no Stipend minute. A Season reset clears Streaks.
+- Replies are fixed templates through the chat-out queue and the existing reply budget: claim "@ann good to see you. Streak 4, +80 Coins."; repeat "@ann you already said hello this Stream. Streak 4."; bare command "Say hello with a few words: !greetings good morning"; closed market says so. Simulated Traders never reply to Twitch.
+- Show the Streak in the !portfolio reply (append ", streak 4" while alive), in a Feed item "ann greeted · streak 4 · +80" (names and numbers only), and in the dashboard Traders list. Do not change the overlay Board: its 24 px rows have no room for a badge.
+- Persistence: traders.greeting_streak and traders.last_greeting_stream_no, sessions.stream_no, via a migration; restore-from-rows reproduces them exactly.
+- Simulator: register a "Greeting streak" scenario: 12 chatters over 4 Streams with Open and Close bell between, most greet every Stream and two skip one.
+
+Tests (node:test, through the engine interface): first claim pays 50 and sets Streak 1; a repeat in the same Stream pays nothing and gets one reply; the next Stream pays 60 and sets Streak 2; skipping a Stream restarts at 1 and hides the old Streak; a bell less than 2 h after a close continues the Stream while the demo Open bell starts a new one; a bare command, a frozen Trader and a closed market leave Coins unchanged; the greeting words never appear in any persist, broadcast or say effect; credits saturate at the cap; restart equivalence with a live Streak.
+
+Done when the tests above pass, pnpm check, lint and test pass, and the Feed item reads correctly in the real overlay at 1920x1080 and half scale in demo mode (say what you looked at and fixed). Commit as "E7: greetings and streaks" with the verification in the body.
+```
+
+## E8 Grants (P1)
+
+**Queued — blocked on E5's Traders list.** The following owner-provided task rules take precedence over section 5.12 if they differ. During implementation, do not edit planning documents or glossaries.
+
+```text
+Task E8: Grants (P1). Read AGENTS.md, docs/specs/emote-exchange.md sections 6, 8, 10, 11 and 12, docs/specs/twitch-kit.md sections 11, 12 and 15 (chat-out queue, commands, guarded actions), and ADR 0006. Do not edit anything under docs/ or GLOSSARY.md. If the spec has section 5.12 and it differs, these rules win. Start only after E5's Traders list exists.
+
+Add, test first:
+
+- Broadcaster-only command !grant @user N and a Grant action on each dashboard Traders row. Mods and viewers cannot grant; treat them like any other Mod command from a non-Mod.
+- N is a whole number from 1 to GRANT_MAX (default 10,000, a validated setting with a range and reset-to-default). Zero, negative, fractional and non-numeric values change nothing. Credits saturate at the Coin cap and record the applied amount, including zero.
+- Target: the command's mention part, by the mentioned user's ID, else an exact case-insensitive login match for a typed name. The target must already be a Trader; an unknown name gets a reply and creates no Trader. If twitch-kit's normalized mention part does not carry the user ID, extend the normalizer and its tests.
+- Effect: Coins rise by the amount. It is not a Trade, adds no Heat and does not touch Prices.
+- Record: a grants table (id, at, user_id, amount applied, source chat or dashboard, request_id unique) via a migration. A repeated request_id credits once: the dashboard sends one per click, chat uses the message ID.
+- Feedback: a Feed item "ann +500 · gift from the streamer" and one reply "@ann received 500 Coins from the streamer." through the chat-out queue. Grants to a sim_ Trader never reply to Twitch.
+- Dashboard: a small form with an amount field and quick amounts 100, 500 and 1,000, then "Give ann 500 Coins?" with a Confirm button. It posts through the guarded route (Origin and X-CTA). No CORS headers. No SQL built by string concatenation.
+
+Tests: broadcaster grant credits exactly N, writes one row, emits one Feed item and one reply; Mod and viewer attempts change nothing; every invalid amount and an unknown target change nothing; a repeated request_id credits once; saturation records the applied amount; a sim_ target never reaches Twitch; the route rejects a request missing the Origin or X-CTA guard.
+
+Done when those pass, pnpm check, lint and test pass, and a dashboard grant in demo mode shows the Feed item on the real overlay and the new balance in the Traders list. Commit as "E8: broadcaster grants" with the verification in the body.
+```
+
+## E9 Live analytics page (P1)
+
+**Queued — blocked on E5.** Schedule after E7 and E8 so Greetings, Grants and the Greeting streak verification scenario are available. During implementation, do not edit planning documents or glossaries.
+
+```text
+Task E9: Live analytics page (P1). Read AGENTS.md, docs/specs/emote-exchange.md sections 5.5, 5.6, 7 (readability), 8, 10 and 11, docs/specs/twitch-kit.md sections 7 and 11 to 15, and ADRs 0006 and 0007. Do not edit anything under docs/ or GLOSSARY.md. Start only after E5.
+
+Goal: a "Live" page in the dashboard where the streamer watches engagement update in real time, to see whether the market is helping the stream.
+
+Engine side: a pure analytics reducer fed by the same normalized events as the market, with injected time and no I/O. State is bounded: 60 one-minute buckets, a 5-minute active window, per-Stream sets bounded by chatter count and cleared when a new Stream starts, and the last 20 Moments. Count only ChatMessages that are not selfSent and not foreign, and exclude the broadcaster. Keep counters per origin (twitch, sim). The page has a Live / Sim / All switch, defaulting to Live once any live event arrives, else Sim, with the SIM badge when Sim is shown.
+
+Metrics:
+- Chat messages per minute: last 60 s and a 60-minute sparkline. Commands count as messages.
+- Active chatters: distinct chatters in the last 5 min, with a sparkline.
+- Trading participation: Traders with at least one accepted Trade this Stream, divided by distinct chatters this Stream, as a whole percent.
+- New chatters this Stream and how many made a first Trade within 10 min of joining.
+- Trades per minute and Coins traded per minute, sparkline.
+- Economy: Coins held by Traders; Coins issued this Stream by source (starting Coins, Stipend, Follow, Raid Visa, Greeting, Grant); Coins burned by Fees. Do not claim Coins are conserved.
+- Greetings: claimed this Stream, returning Traders (Streak 2 or more), longest live Streak with name. Show only if E7 exists.
+- Market now: hottest Listing, three biggest movers up and three down against the Session Open Price, active Listing count.
+- Moments: the last 20 IPO, Halt, Moon, Crash and Raid items with times.
+- Stream: uptime, follows and raids this Stream. Viewers is optional: poll Helix Get Streams every 60 s only while the page is open and the stream is online, show "-" on failure, and skip it if it needs new scopes or dependencies.
+- Versus recent Streams: on the closing Bell write a summary (average and peak messages per minute, peak active chatters, participation, new-chatter conversion, Coins issued and burned) into sessions.summary. Show the delta against the median of the last 5 completed live Streams, hidden until two exist.
+
+Delivery: an explicit, versioned public projection pushed over SSE at most once per second, only while a Live page client is connected, with the same Host and Origin guards as the snapshot stream and no CORS headers. Names, numbers, tickers and Moment kinds only: no chat text, no tokens. The client reader validates the payload like the existing snapshot reader. Analytics are runtime state, not replayed after a restart: the page restarts empty ("Counters reset when the app restarts") and the Stream summary covers the time since restart.
+
+UI: add Live to the dashboard navigation. Layout: four stat cards (Messages per min, Active chatters, Trading participation, Trades per min) with a small delta against recent Streams when available; two sparkline charts; Economy, Greetings, Market now and Moments cards. Draw sparklines on canvas or SVG with no chart dependency. Empty state when no Stream Session is open ("Open the market to start collecting. In demo mode, press Start demo."), a reconnecting state when SSE drops, text alternatives for charts, and reduced-motion support. Use the dashboard's current visual language, or the redesign's tokens if they have landed. Update the DOM at 1 Hz, not the whole tree.
+
+Tests (node:test, test first): bucket rollover; exact 5-minute and 10-minute boundaries; distinct counts; participation and new-chatter conversion; issued-by-source reconciles with the engine's applied ledger amounts; origin separation; bounds (60 buckets, 20 Moments, sets cleared on a new Stream); the projection contains no chat text or token; SSE route guards; client reader rejects malformed payloads.
+
+Done when the tests pass, pnpm check, lint and test pass, and you have looked at the Live page in demo mode with Pump and dump and Greeting streak running, at 1440x900 and 390 px wide (say what you looked at and fixed). Commit as "E9: live analytics page" with the verification in the body.
+```
+
 ## Sprint exit checklist
 
 - [ ] E0 report records all five fixed fixtures and chosen defaults

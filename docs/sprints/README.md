@@ -34,6 +34,8 @@ The authoritative dependency list and protocol details are in [the Twitch Kit sp
 5. Complete the core overlay and dashboard, then check them at OBS size.
 6. Run live walkthroughs and failure/recovery checks before recording the submission.
 
+P1 backlog: [E7 Greetings and streaks](sprint-2-emote-exchange.md#e7-greetings-and-streaks-p1), [E8 Grants](sprint-2-emote-exchange.md#e8-grants-p1), and [E9 Live analytics](sprint-2-emote-exchange.md#e9-live-analytics-page-p1). These are queued, not implemented. Finish E5/E6 first; E8 requires E5's Traders list and E9 requires E5. Schedule E9 after E7/E8 so its reward accounting and Greeting streak visual check cover the delivered features. Preserve hardening and submission time; P1 work does not replace P0 acceptance gates.
+
 Parallel work is useful for independent adapters and visual implementation once their interfaces are agreed. Keep product behavior and verification evidence in the main build session. Log any additional work honestly in [the session log](../submission/codex-sessions.md).
 
 ## Cut lines
