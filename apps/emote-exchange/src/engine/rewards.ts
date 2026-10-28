@@ -21,6 +21,7 @@ export function touchTrader(
     lastActiveAt: now,
     isSim: existing?.isSim ?? origin === "sim",
     frozen: existing?.frozen ?? false,
+    sessionOpenWorth: existing ? existing.sessionOpenWorth : String(state.settings.STARTING_COINS),
   };
   state.traders.set(user.id, trader);
   return trader;

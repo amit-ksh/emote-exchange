@@ -1,6 +1,6 @@
 # Emote Exchange
 
-A local play-money emote market for Twitch, displayed through an OBS browser source. K1–K7 and E1–E3 are verified. [E3](../../docs/verification/e3-runtime-and-recovery.md) connects real/simulated events and one-second ticks to the market, persists settlement/checkpoints atomically, restores after restart and queues command replies. Automated checks and a real Twitch buy from `amit1541` pass, including the persisted Holding and Twitch-acknowledged bot reply. The complete on-screen market remains E4/E5 in [the implementation plan](../../docs/implementation-plan.md).
+A local play-money emote market for Twitch, displayed through an OBS browser source. K1–K7 and E1–E3 are verified. [E3](../../docs/verification/e3-runtime-and-recovery.md) connects real/simulated events and one-second ticks to the market, persists settlement/checkpoints atomically, restores after restart and queues command replies. Automated checks and a real Twitch buy from `amit1541` pass, including the persisted Holding and Twitch-acknowledged bot reply. The [E4 overlay](../../docs/verification/e4-overlay.md) is browser-verified; dashboard controls remain E5 in [the implementation plan](../../docs/implementation-plan.md).
 
 ## Run the foundation
 
@@ -11,7 +11,7 @@ pnpm install
 pnpm dev:exchange
 ```
 
-Open [the dashboard](http://localhost:4100/) and [the overlay](http://127.0.0.1:4100/overlay). No credentials or `.env` are required. Click **Start demo** to drive the market with simulated chat and channel events. Market data is available in `/api/snapshot`; market widgets arrive in E4/E5.
+Open [the dashboard](http://localhost:4100/) and [the overlay](http://127.0.0.1:4100/overlay). No credentials or `.env` are required. Click **Start demo** to drive the market with simulated chat and channel events. Market data is available in `/api/snapshot`; the overlay shows the market.
 
 For the built client:
 
@@ -26,7 +26,7 @@ Use **Test local connection** on the dashboard to verify a guarded action, a sav
 
 ## OBS
 
-Add a Browser Source at `http://127.0.0.1:4100/overlay`, width 1920, height 1080. The page background is transparent. Keep shutdown-when-hidden and refresh-on-activation off. The current overlay is a foundation label with a SIM badge while simulation runs; market widgets arrive in E4.
+Add a Browser Source at `http://127.0.0.1:4100/overlay`, width 1920, height 1080. The page background is transparent. Keep shutdown-when-hidden and refresh-on-activation off. The overlay includes Tape, Chart, Board, Feed and queued Banners; SIM appears while simulation runs. Use ?motion=reduced for fades and static Tape pages, ?widgets=chart,board to choose widgets, and ?sound=off (sounds are P1).
 
 ## Setup checklist
 
@@ -40,7 +40,7 @@ Use **Copy URL** in the overlay panel and paste into an OBS Browser source. Keep
 
 Follow [the setup guide](../../docs/setup-guide.md) to register one confidential Twitch app. Copy `.env.example` to `.env` and keep secrets local. Restart, click **Connect Twitch** under Broadcaster, then sign in and approve the permissions. Connected accounts are validated and restored after restart. **Connect bot** is optional; each account has a Disconnect button.
 
-After broadcaster login, the incoming-events panel should show **EventSub connected** and five **enabled** subscriptions. Type in your channel’s Twitch chat and check that **Live events** and **Chat messages** increase. The browser receives counts and fixed connection status; incoming chat text stays server-side. Counters reset on app restart. The header and overlay show **Twitch connected** when authorized; without credentials they show **Demo mode**. The simulator works in either mode; market widgets are still pending.
+After broadcaster login, the incoming-events panel should show **EventSub connected** and five **enabled** subscriptions. Type in your channel’s Twitch chat and check that **Live events** and **Chat messages** increase. The browser receives counts and fixed connection status; incoming chat text stays server-side. Counters reset on app restart. The dashboard shows the connection status. The simulator and market overlay work in either mode.
 
 EventSub recovers from lost connections with backoff and recreates subscriptions. Twitch reconnect handoffs retain subscriptions without creating duplicates. Missed events during a lost connection cannot be replayed. For a local Twitch CLI mock, override both `EVENTSUB_WS_URL` and `EVENTSUB_SUBSCRIPTIONS_URL` as shown in [K3](../../docs/sprints/sprint-1-twitch-kit.md). Overrides accept only the official Twitch endpoints or explicit HTTP/WS loopback mock destinations.
 
@@ -87,7 +87,7 @@ pnpm smoke
 - Port busy: stop the other Emote Exchange process, or set matching `PORT` and `PUBLIC_ORIGIN` in `.env`.
 - Unsupported Node: use Node 24.12+ within major 24; native TypeScript needs no `tsx`.
 - Production client missing: run `pnpm build` first.
-- Overlay looks empty: the foundation label is at the bottom; the remaining canvas is transparent.
+- Overlay looks empty: start the simulator or let two chatters use the same emote to list it. The central canvas stays transparent.
 - Connection interrupted: the dashboard reports SSE reconnecting. Restart the local server if needed.
 - Development: client edits update through Vite HMR; restart the command after server edits.
 - Runtime mismatch: `pnpm install` provisions the project-local Node 24 runtime; check it with `pnpm exec node --version`.

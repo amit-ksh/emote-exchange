@@ -4,6 +4,7 @@ import type { FoundationSnapshot } from "../../src/public-state.ts";
 import { ChatOutPanel, readChatOut } from "./chat-out.tsx";
 import { EmoteCatalogPanel, readCatalog } from "./emotes.tsx";
 import { EventSubPanel, readEventSub } from "./eventsub.tsx";
+import { ExchangeOverlay } from "./overlay.tsx";
 import { OverlayUrlPanel, SetupChecklist } from "./setup.tsx";
 import { readSimulator, SimulatorPanel } from "./simulator.tsx";
 import "./styles.css";
@@ -254,10 +255,6 @@ function ConnectionPanel({ auth }: { auth: FoundationSnapshot["auth"] | undefine
   );
 }
 
-function measureOverlayScale() {
-  return Math.min(1, window.innerWidth / 1920, window.innerHeight / 1080);
-}
-
 function Dashboard() {
   const { snapshot, status } = useFoundation("dashboard");
   const [checkStatus, setCheckStatus] = useState<"idle" | "checking" | "success" | "failed">(
@@ -319,21 +316,21 @@ function Dashboard() {
               <br />A lot of attention.
             </h1>
             <p className="intro-description">
-              Your channel’s emotes, a play-money market, and a front-row seat in OBS. The local
-              foundation is the first step.
+              Your channel’s emotes, a play-money market, and a front-row seat in OBS. Connect
+              Twitch or start a demo to bring the Exchange to life.
             </p>
           </div>
           <aside className="foundation-status" aria-labelledby="foundation-title">
             <div className="status-heading">
               <span className={`status-indicator status-indicator--${status}`} aria-hidden="true" />
-              <span className="eyebrow">FOUNDATION STATUS</span>
+              <span className="eyebrow">CONNECTION STATUS</span>
             </div>
             <h2 id="foundation-title">
-              {snapshot ? "Local foundation ready." : "Checking the local server."}
+              {snapshot ? "Your Exchange is ready." : "Checking the local server."}
             </h2>
             <p>
-              Twitch sign-in, incoming events, the simulator, and the transparent overlay are ready.
-              Market rules and trading come next.
+              Chat drives Prices and Trades. Open the overlay to see the market, or use the
+              simulator for a dry run.
             </p>
             <div className="connection-status" role="status">
               <span>{connectionLabel}</span>
@@ -428,46 +425,8 @@ function Dashboard() {
   );
 }
 
-function Overlay() {
-  const { snapshot } = useFoundation("overlay");
-  const [scale, setScale] = useState(measureOverlayScale);
-
-  useEffect(() => {
-    const resize = () => setScale(measureOverlayScale());
-    window.addEventListener("resize", resize);
-    return () => window.removeEventListener("resize", resize);
-  }, []);
-
-  return (
-    <main className="overlay-viewport" aria-label="Emote Exchange OBS overlay">
-      <div className="overlay-canvas" style={{ transform: `scale(${scale})` }}>
-        {snapshot?.simulatorRunning && (
-          <aside className="overlay-sim-badge" aria-label="Simulation running">
-            SIM
-          </aside>
-        )}
-        <section className="foundation-label" aria-label="Emote Exchange, market coming next">
-          <span className="overlay-brand-mark" aria-hidden="true">
-            EX
-          </span>
-          <div>
-            <h1>Emote Exchange</h1>
-            <p>
-              <span>{snapshot?.mode === "live" ? "Twitch connected" : "Demo mode"}</span>
-              <span className="label-separator" aria-hidden="true">
-                /
-              </span>
-              Market coming next
-            </p>
-          </div>
-        </section>
-      </div>
-    </main>
-  );
-}
-
 const isOverlay = window.location.pathname.replace(/\/$/, "") === "/overlay";
 document.documentElement.dataset.view = isOverlay ? "overlay" : "dashboard";
 const root = document.getElementById("root");
 if (!root) throw new Error("App root is missing");
-createRoot(root).render(<StrictMode>{isOverlay ? <Overlay /> : <Dashboard />}</StrictMode>);
+createRoot(root).render(<StrictMode>{isOverlay ? <ExchangeOverlay /> : <Dashboard />}</StrictMode>);

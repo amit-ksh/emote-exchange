@@ -5,8 +5,50 @@ import { join } from "node:path";
 import test from "node:test";
 import { openStore } from "@emote-exchange/twitch-kit";
 import { stepMarket } from "../src/engine/market.ts";
+import { marketProjection } from "../src/market-display.ts";
 import { createMarketRepository, marketMigrations } from "../src/market-store.ts";
 import { chat, emote } from "./market-fixture.ts";
+
+test("schema 2 upgrades preserve Coins and Holdings without inventing a session baseline", (t) => {
+  const directory = mkdtempSync(join(tmpdir(), "exchange-e4-upgrade-"));
+  const filename = join(directory, "market.sqlite");
+  let store = openStore({ filename, migrations: marketMigrations });
+  t.after(() => {
+    store.close();
+    rmSync(directory, { recursive: true, force: true });
+  });
+  let repo = createMarketRepository(store);
+  let state = repo.load(0, [emote("X")]);
+  for (const input of [
+    chat("sim_ann", 0, null, [], ["X"]),
+    chat("sim_bob", 0, null, [], ["X"]),
+    chat("sim_ann", 0, "buy", ["X", "1"]),
+  ]) {
+    const next = stepMarket(state, input, 0);
+    repo.commit(next.state, next.effects);
+    state = next.state;
+  }
+  // Recreate the previous on-disk schema around real persisted market rows.
+  store.writeBatch([
+    { sql: "ALTER TABLE traders DROP COLUMN session_open_worth" },
+    { sql: "PRAGMA user_version=2" },
+  ]);
+  store.close();
+  store = openStore({ filename, migrations: marketMigrations });
+  repo = createMarketRepository(store);
+  const restored = repo.load(0, [emote("X")]);
+  assert.equal(restored.traders.get("sim_ann")?.coins, 899);
+  assert.deepEqual(restored.holdings, state.holdings);
+  assert.equal(restored.traders.get("sim_ann")?.sessionOpenWorth, null);
+  assert.equal(marketProjection(restored).traders[0].sessionChangePercent, null);
+  const opened = stepMarket(
+    restored,
+    { type: "StreamOnline", id: "upgrade-bell", origin: "sim", at: 0 },
+    0,
+  );
+  repo.commit(opened.state, opened.effects);
+  assert.equal(marketProjection(repo.load(0)).traders[0].sessionChangePercent, 0);
+});
 
 test("SQLite rows and checkpoint reopen equivalent and a failed event rolls back every durable change", (t) => {
   const directory = mkdtempSync(join(tmpdir(), "exchange-e3-"));
@@ -68,6 +110,47 @@ test("Delist followed by a fresh IPO cannot restore candles from the old Listing
     assert.deepEqual(restored.listings.get("X")?.candles, [
       { minuteStart: 60_000, open: 100, high: 100, low: 100, close: 100 },
     ]);
+  } finally {
+    store.close();
+  }
+});
+
+test("opening Bell snapshots Trader Net Worth for session change and that baseline survives reopening", () => {
+  const store = openStore({ filename: ":memory:", migrations: marketMigrations });
+  try {
+    const repo = createMarketRepository(store);
+    let state = repo.load(0, [emote("X")]);
+    const apply = (input: Parameters<typeof stepMarket>[1]) => {
+      const result = stepMarket(state, input, 0);
+      repo.commit(result.state, result.effects);
+      state = result.state;
+    };
+    apply(chat("sim_ann", 0, null, [], ["X"]));
+    apply(chat("sim_bob", 0, null, [], ["X"]));
+    apply(chat("sim_ann", 0, "buy", ["X", "5"]));
+    assert.equal(
+      marketProjection(state).traders.find((trader) => trader.login === "sim_ann")
+        ?.sessionChangePercent,
+      -0.5,
+    );
+    apply({ type: "StreamOnline", id: "baseline-open", origin: "sim", at: 0 });
+    assert.equal(
+      marketProjection(repo.load(0)).traders.find((trader) => trader.login === "sim_ann")
+        ?.sessionChangePercent,
+      0,
+    );
+    apply({
+      type: "Follow",
+      id: "follow-after-open",
+      origin: "sim",
+      at: 0,
+      user: { id: "sim_ann", login: "sim_ann", displayName: "sim_ann" },
+    });
+    assert.equal(
+      marketProjection(repo.load(0)).traders.find((trader) => trader.login === "sim_ann")
+        ?.sessionChangePercent,
+      20.1,
+    );
   } finally {
     store.close();
   }

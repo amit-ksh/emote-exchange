@@ -63,6 +63,8 @@ Done when tests pass, and a real !buy from a test account shows in the snapshot 
 
 ## E4 Overlay
 
+**Complete — October 28, 2026 (Chrome gate).** All P0 widgets work in demo mode at full and half scale, including reduced motion. Chrome Pump and dump capture averaged 134.32 frames/s, p95 interval 11.93 ms, with occasional stalls recorded. Actual OBS remains a separate manual gate. See [E4 evidence](../verification/e4-overlay.md) and [the plan](../plans/e4-overlay.md). Dashboard controls remain E5; scenario/soak work remains E6.
+
 Use `/plan` first. Then iterate visually: run demo mode, look at it in OBS, give Codex specific fixes.
 
 ```text

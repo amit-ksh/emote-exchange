@@ -36,6 +36,7 @@ export const marketMigrations: readonly Migration[] = [
     last_tick_at INTEGER NOT NULL, data TEXT NOT NULL CHECK(json_valid(data)));
 `,
   },
+  { version: 3, sql: "ALTER TABLE traders ADD COLUMN session_open_worth TEXT DEFAULT NULL;" },
 ];
 
 export function createMarketRepository(store: Store) {
@@ -50,7 +51,7 @@ export function createMarketRepository(store: Store) {
           checkpoint: saved?.data ?? null,
           traders: store
             .read<Omit<Trader, "frozen" | "isSim"> & { frozen: number; isSim: number }>(
-              "SELECT user_id AS id,login,display_name AS displayName,color,coins,frozen,created_at AS createdAt,last_active_at AS lastActiveAt,is_sim AS isSim FROM traders ORDER BY rowid",
+              "SELECT user_id AS id,login,display_name AS displayName,color,coins,frozen,created_at AS createdAt,last_active_at AS lastActiveAt,is_sim AS isSim,session_open_worth AS sessionOpenWorth FROM traders ORDER BY rowid",
             )
             .map((row) => ({ ...row, frozen: Boolean(row.frozen), isSim: Boolean(row.isSim) })),
           listings: store
@@ -104,7 +105,7 @@ export function createMarketRepository(store: Store) {
             writes.push({ sql: `DELETE FROM ${table}` });
         for (const row of effect.traders)
           writes.push({
-            sql: "INSERT INTO traders VALUES (?,?,?,?,?,?,?,?,?) ON CONFLICT(user_id) DO UPDATE SET login=excluded.login,display_name=excluded.display_name,color=excluded.color,coins=excluded.coins,frozen=excluded.frozen,last_active_at=excluded.last_active_at,is_sim=excluded.is_sim",
+            sql: "INSERT INTO traders VALUES (?,?,?,?,?,?,?,?,?,?) ON CONFLICT(user_id) DO UPDATE SET login=excluded.login,display_name=excluded.display_name,color=excluded.color,coins=excluded.coins,frozen=excluded.frozen,last_active_at=excluded.last_active_at,is_sim=excluded.is_sim,session_open_worth=excluded.session_open_worth",
             params: [
               row.id,
               row.login,
@@ -115,6 +116,7 @@ export function createMarketRepository(store: Store) {
               row.createdAt,
               row.lastActiveAt,
               Number(row.isSim),
+              row.sessionOpenWorth,
             ],
           });
         for (const [status, listings] of [

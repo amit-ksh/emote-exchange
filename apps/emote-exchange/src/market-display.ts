@@ -3,6 +3,19 @@ import { marketDisplay } from "./engine/market.ts";
 import { netWorth } from "./engine/sessions.ts";
 
 export function marketProjection(state: MarketState, status: "ready" | "storage-error" = "ready") {
+  const traders = [...state.traders.values()]
+    .map((trader) => ({ trader, worth: netWorth(state, trader.id) }))
+    .sort((a, b) =>
+      a.worth > b.worth
+        ? -1
+        : a.worth < b.worth
+          ? 1
+          : a.trader.id < b.trader.id
+            ? -1
+            : a.trader.id > b.trader.id
+              ? 1
+              : 0,
+    );
   return {
     ...marketDisplay(state),
     status,
@@ -17,8 +30,12 @@ export function marketProjection(state: MarketState, status: "ready" | "storage-
         .length,
       candles: listing.candles.map((candle) => ({ ...candle })),
     })),
-    traders: [...state.traders.values()].map((trader) => {
-      const worth = netWorth(state, trader.id);
+    traders: traders.map(({ trader, worth }) => {
+      const opening = trader.sessionOpenWorth === null ? null : BigInt(trader.sessionOpenWorth);
+      const sessionChangePercent =
+        opening === null || opening === 0n
+          ? null
+          : Number(((worth - opening) * 10_000n) / opening) / 100;
       let safeWorth = worth;
       if (safeWorth > BigInt(Number.MAX_SAFE_INTEGER)) safeWorth = BigInt(Number.MAX_SAFE_INTEGER);
       return {
@@ -31,6 +48,7 @@ export function marketProjection(state: MarketState, status: "ready" | "storage-
         isSim: trader.isSim,
         netWorth: Number(safeWorth),
         capped: worth > safeWorth,
+        sessionChangePercent,
         holdings: [...(state.holdings.get(trader.id)?.values() ?? [])].map((holding) => ({
           ticker: holding.ticker,
           shares: holding.shares,

@@ -57,6 +57,11 @@ export function bell(
   moments: MarketMoment[],
 ): { sessions: MarketSession[]; says: MarketSay[] } {
   if (input.type === "StreamOnline") {
+    for (const trader of state.traders.values())
+      state.traders.set(trader.id, {
+        ...trader,
+        sessionOpenWorth: netWorth(state, trader.id).toString(),
+      });
     for (const listing of state.listings.values()) {
       listing.sessionOpenPrice = listing.price;
       listing.moonFired = false;

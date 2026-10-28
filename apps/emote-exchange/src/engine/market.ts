@@ -19,6 +19,7 @@ export interface Trader {
   lastActiveAt: number;
   isSim: boolean;
   frozen: boolean;
+  sessionOpenWorth: string | null;
 }
 export interface Holding {
   userId: string;
@@ -627,7 +628,13 @@ function applyMarket(
   }
   if (input.type === "StreamOnline" || input.type === "StreamOffline") {
     const result = bell(state, input, now, moments);
-    const write = accountWrites(persist(state, [], [...state.listings.values()]), state, accounts);
+    const write = accountWrites(
+      persist(state, input.type === "StreamOnline" ? [...state.traders.values()] : [], [
+        ...state.listings.values(),
+      ]),
+      state,
+      accounts,
+    );
     write.sessions = result.sessions;
     return { state, effects: [write, broadcast(state, moments), ...result.says] };
   }

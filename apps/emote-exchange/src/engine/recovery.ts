@@ -157,6 +157,11 @@ export function restoreMarket(
     );
     if (saved.sessionId !== null && state.session === null) throw new Error();
     for (const trader of rows.traders) {
+      if (
+        trader.sessionOpenWorth !== null &&
+        (typeof trader.sessionOpenWorth !== "string" || !/^\d{1,64}$/.test(trader.sessionOpenWorth))
+      )
+        throw new Error();
       if (!Number.isSafeInteger(trader.coins) || trader.coins < 0 || trader.coins > 1_000_000_000)
         throw new Error();
       integer(trader.createdAt, 0, saved.at);

@@ -6,11 +6,11 @@ This repository focuses on one Codex x TwitchCon hackathon entry. The plan is to
 
 ## Status
 
-The single-app plan, local foundation and K1–K7 are complete: private SQLite storage, guarded HTTP actions, bounded SSE, Twitch OAuth, incoming events, queued chat sending, cached emote catalogs and a seeded simulator with 24 original offline assets. Live reception, chat sending, 7TV and keyless offline simulation are verified. E1–E3's market rules, runtime, commands and recovery pass automated checks, and a real-account buy/persisted Holding/queued reply is verified. The product UI and full live/OBS walkthroughs remain in [the sprint plan](docs/sprints/README.md).
+The single-app plan, local foundation and K1–K7 are complete: private SQLite storage, guarded HTTP actions, bounded SSE, Twitch OAuth, incoming events, queued chat sending, cached emote catalogs and a seeded simulator with 24 original offline assets. Live reception, chat sending, 7TV and keyless offline simulation are verified. E1–E3's market rules, runtime, commands and recovery pass automated checks, and a real-account buy/persisted Holding/queued reply is verified. The E4 overlay is implemented and browser-verified; dashboard controls and full live/OBS walkthroughs remain in [the sprint plan](docs/sprints/README.md).
 
 ## Quick start
 
-The [E0 numerical experiment](docs/verification/e0-behavior-fixtures.md) passes all five fixed targets. Run `pnpm experiment:market` to reproduce it. The [E1 engine](docs/verification/e1-market-engine.md) reproduces B1/B2/B3/B5 and passes a 24-Listing/500-Trader probe (`pnpm probe:market`). [E2](docs/verification/e2-trading-and-events.md) adds settlement/B4, rewards, Halts, bells and reset. [E3](docs/verification/e3-runtime-and-recovery.md) wires normalized chat, one-second ticks, SQLite recovery and queued command replies into the app. `/api/snapshot` includes the market; dashboard/overlay panels await E4/E5.
+The [E0 numerical experiment](docs/verification/e0-behavior-fixtures.md) passes all five fixed targets. Run `pnpm experiment:market` to reproduce it. The [E1 engine](docs/verification/e1-market-engine.md) reproduces B1/B2/B3/B5 and passes a 24-Listing/500-Trader probe (`pnpm probe:market`). [E2](docs/verification/e2-trading-and-events.md) adds settlement/B4, rewards, Halts, bells and reset. [E3](docs/verification/e3-runtime-and-recovery.md) wires normalized chat, one-second ticks, SQLite recovery and queued command replies into the app. `/api/snapshot` includes the market; the Tape, Chart, Board, Feed, Banners and SIM overlay are implemented in [E4](docs/verification/e4-overlay.md). Dashboard controls remain E5.
 
 Use Node.js 24.12+ in the Node 24 LTS line and pnpm 11.25.0, then run from the repository root:
 
