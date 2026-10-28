@@ -26,7 +26,8 @@
     "lint": "biome check .",
     "format": "biome check --write .",
     "test": "pnpm -r --workspace-concurrency=1 test",
-    "smoke": "node scripts/smoke.mjs"
+    "smoke": "node scripts/smoke.mjs",
+    "experiment:market": "node scripts/experiments/behavior-fixtures.mjs"
   },
   "devDependencies": {
     "@biomejs/biome": "2.6.3",

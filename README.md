@@ -10,6 +10,8 @@ The single-app plan, local foundation and K1–K7 are complete: private SQLite s
 
 ## Quick start
 
+The [E0 numerical experiment](docs/verification/e0-behavior-fixtures.md) passes all five fixed behavior targets with the planned defaults. Run `pnpm experiment:market` to reproduce it. The application market engine is the next implementation task.
+
 Use Node.js 24.12+ in the Node 24 LTS line and pnpm 11.25.0, then run from the repository root:
 
 ```sh

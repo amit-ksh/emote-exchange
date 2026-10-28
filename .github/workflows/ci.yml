@@ -27,5 +27,6 @@ jobs:
       - run: pnpm check
       - run: pnpm lint
       - run: pnpm test
+      - run: pnpm experiment:market
       - run: pnpm build
       - run: pnpm smoke

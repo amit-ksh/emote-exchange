@@ -10,6 +10,8 @@
 
 ## E0 Prove the behavior fixtures
 
+**Complete — October 28, 2026.** The dependency-free numerical experiment passes B1–B5 with the existing defaults and unchanged fixtures/thresholds. B4 is checked analytically; settlement and market-engine tests remain E1/E2 work. Run `pnpm experiment:market`. See [the measured results and event order](../verification/e0-behavior-fixtures.md). No spec or ADR change was needed.
+
 ```text
 Read docs/specs/emote-exchange.md sections 5.2, 5.4 and 5.10, and ADR 0009. Task E0.
 
