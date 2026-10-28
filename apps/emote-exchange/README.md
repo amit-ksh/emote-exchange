@@ -1,6 +1,6 @@
 # Emote Exchange
 
-A local play-money emote market for Twitch, displayed through an OBS browser source. K1–K7 and E1/E2 are verified. [E3](../../docs/verification/e3-runtime-and-recovery.md) connects real/simulated events and one-second ticks to the market, persists settlement/checkpoints atomically, restores after restart and queues command replies. Automated checks pass; a second non-bot Twitch account is needed for the remaining live buy acceptance. The complete on-screen market remains E4/E5 in [the implementation plan](../../docs/implementation-plan.md).
+A local play-money emote market for Twitch, displayed through an OBS browser source. K1–K7 and E1–E3 are verified. [E3](../../docs/verification/e3-runtime-and-recovery.md) connects real/simulated events and one-second ticks to the market, persists settlement/checkpoints atomically, restores after restart and queues command replies. Automated checks and a real Twitch buy from `amit1541` pass, including the persisted Holding and Twitch-acknowledged bot reply. The complete on-screen market remains E4/E5 in [the implementation plan](../../docs/implementation-plan.md).
 
 ## Run the foundation
 

@@ -1,6 +1,6 @@
 # E3 runtime, commands and recovery verification
 
-Implemented October 28, 2026. Automated verification passes; the sprint's real-account buy acceptance is **pending**. See [the written plan](../plans/e3-runtime-and-recovery.md). No dependency or product UI was added.
+Completed October 28, 2026. Automated verification and the sprint's real-account buy acceptance pass. See [the written plan](../plans/e3-runtime-and-recovery.md). No dependency or product UI was added.
 
 ## Runtime and storage
 
@@ -39,8 +39,15 @@ Snapshots/SSE add an explicit `market` projection: approved Listing names/images
 
 `pnpm check`, `pnpm lint`, `pnpm test` (119 tests: 70 Twitch Kit, 49 app), `pnpm build` and `pnpm smoke` pass. Production smoke starts the built app without credentials, checking routes, guards, SSE/client lifecycle, assets, simulator and real FOLLOW/RAID/BELL moments plus closing summary preview. No new visual/OBS result is claimed. Full runtime soak/performance remains E6.
 
-## Live acceptance pending
+## Live acceptance verified
 
-The development app runs on port 4100 with the existing private configuration. Broadcaster and bot reconnect as `ammit_ksh`; EventSub is connected with all five subscriptions enabled. A guarded Opening day run prepared DemoBull, then the simulator was stopped. This is connectivity evidence, **not a real buy**.
+The development app runs on port 4100 with the existing private configuration. Broadcaster and bot reconnect as `ammit_ksh`; EventSub is connected with all five subscriptions enabled. A guarded Opening day run prepared DemoBull, then the simulator was stopped. The Listing was prepared by simulation; the following buy came from a real Twitch account.
 
-Remaining human step: from a second Twitch account that is not the connected bot, send `!buy DemoBull 1` in `ammit_ksh` chat. Verify its Coins/Holding in `/api/snapshot`, a Twitch-origin Trade and a successful outgoing queue log/reply. If halted, wait for expiry and retry after the reply budget. The connected bot's messages are deliberately ignored, even when it is also the broadcaster. No account was disconnected to bypass this. Only the public username and message are needed; no new app credentials are required.
+On **October 28, 2026, 6:21:12 PM IST**, the user sent `!buy DemoBull 1` from **amit1541** (a separate non-bot account) in `ammit_ksh` chat and reported “sent, amit1541.” Verification read only the public snapshot, outgoing queue log and selected market rows:
+
+- `/api/snapshot` shows `amit1541`, `isSim: false`, **894 Coins** and a **1-share DemoBull Holding**, cost basis **106 Coins**.
+- Read-only SQLite queries confirm a persisted `origin: twitch`, `side: buy` Trade: **1 share at 104.39**, actual debit **106 Coins**, timestamp **1793191872790**. The durable Holding matches the public projection.
+- The outgoing queue records `@amit1541 BUY 1 DemoBull @ 104.39 (106 Coins).` with `kind: sent`, `is_sent: true`, HTTP **200**, no drop reason, timestamp **1793191873168**. This is Twitch's send acknowledgement, not just local queue acceptance.
+- The market remains ready, receiver connected and simulator stopped. Transient Trade moments had already expired by inspection; the persistent Trade supplies origin/fill evidence. No account was disconnected, incoming chat text was not inspected, and no additional test message was sent by the agent.
+
+This completes E3's live buy/snapshot/queued-reply gate. Full two-account walkthroughs, real Follow/closing-bell acceptance, OBS and scenario/runtime soak remain later sprint gates.

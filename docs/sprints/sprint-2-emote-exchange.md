@@ -50,7 +50,7 @@ Done when all engine tests pass.
 
 ## E3 Commands, replies, wiring and persistence
 
-**Implemented; live buy acceptance pending — October 28, 2026.** Runtime wiring, transactional rows/checkpoints, pure recovery, viewer/Mod commands, persisted reply budgets and safe market snapshots pass automated checks (119 workspace tests). The keyless app lists/trades through the simulator and SQLite. Broadcaster/bot and all five subscriptions reconnect locally; a real buy from a second non-bot Twitch account still needs verification before marking E3 complete. See [E3 evidence and the live step](../verification/e3-runtime-and-recovery.md) and [the plan](../plans/e3-runtime-and-recovery.md). Product UI remains E4/E5.
+**Complete — October 28, 2026.** Runtime wiring, transactional rows/checkpoints, pure recovery, viewer/Mod commands, persisted reply budgets and safe market snapshots pass automated checks (119 workspace tests). The keyless app lists/trades through the simulator and SQLite. A real `!buy DemoBull 1` from `amit1541` filled at 104.39, left 894 Coins and one persisted share, and received a Twitch-acknowledged reply through the connected sender. See [E3 evidence](../verification/e3-runtime-and-recovery.md) and [the plan](../plans/e3-runtime-and-recovery.md). Product UI remains E4/E5; full live/OBS walkthroughs remain later gates.
 
 ```text
 Read docs/specs/emote-exchange.md sections 6 (Commands), 10 (Data) and 13 (Acceptance tests 11-12), and docs/specs/twitch-kit.md sections 11-13. Task E3.
