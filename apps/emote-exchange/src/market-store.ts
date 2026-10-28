@@ -41,6 +41,10 @@ export const marketMigrations: readonly Migration[] = [
     version: 4,
     sql: "ALTER TABLE traders ADD COLUMN greeting_streak INTEGER NOT NULL DEFAULT 0 CHECK(greeting_streak >= 0); ALTER TABLE traders ADD COLUMN last_greeting_stream_no INTEGER DEFAULT NULL; ALTER TABLE sessions ADD COLUMN stream_no INTEGER NOT NULL DEFAULT 0 CHECK(stream_no >= 0);",
   },
+  {
+    version: 5,
+    sql: "CREATE TABLE grants (id TEXT PRIMARY KEY, at INTEGER NOT NULL, user_id TEXT NOT NULL REFERENCES traders(user_id), amount INTEGER NOT NULL CHECK(typeof(amount)='integer' AND amount BETWEEN 0 AND 1000000000), source TEXT NOT NULL CHECK(source IN ('chat','dashboard')), request_id TEXT NOT NULL UNIQUE);",
+  },
 ];
 
 export function createMarketRepository(store: Store) {
@@ -53,6 +57,9 @@ export function createMarketRepository(store: Store) {
       return restoreMarket(
         {
           checkpoint: saved?.data ?? null,
+          grantRequestIds: store
+            .read<{ requestId: string }>("SELECT request_id AS requestId FROM grants")
+            .map((row) => row.requestId),
           traders: store
             .read<Omit<Trader, "frozen" | "isSim"> & { frozen: number; isSim: number }>(
               "SELECT user_id AS id,login,display_name AS displayName,color,coins,frozen,created_at AS createdAt,last_active_at AS lastActiveAt,is_sim AS isSim,session_open_worth AS sessionOpenWorth,greeting_streak AS greetingStreak,last_greeting_stream_no AS lastGreetingStreamNo FROM traders ORDER BY rowid",
@@ -98,6 +105,7 @@ export function createMarketRepository(store: Store) {
         if (effect.reset)
           for (const table of [
             "holdings",
+            "grants",
             "trades",
             "credits",
             "candles",
@@ -177,6 +185,11 @@ export function createMarketRepository(store: Store) {
               row.price,
               row.coins,
             ],
+          });
+        for (const row of effect.grants)
+          writes.push({
+            sql: "INSERT INTO grants VALUES (?,?,?,?,?,?)",
+            params: [row.id, row.at, row.userId, row.amount, row.source, row.requestId],
           });
         for (const row of effect.credits)
           writes.push({

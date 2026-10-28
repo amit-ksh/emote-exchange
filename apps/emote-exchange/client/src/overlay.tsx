@@ -330,6 +330,8 @@ function feedText(moment: MarketMoment) {
       return `${moment.name} joined · +${moment.coins} Coins`;
     case "GREETING":
       return `${moment.name} greeted · streak ${moment.streak} · +${moment.coins}`;
+    case "GRANT":
+      return `${moment.name} +${moment.coins} · gift from the streamer`;
     case "VISA":
       return `${moment.name} · Raid Visa +${moment.coins}`;
     case "RAID":
@@ -391,6 +393,12 @@ function Feed({
                   <span>{priceLabel(moment.price ?? 1)}</span>
                 </div>
               </>
+            ) : moment.kind === "GRANT" ? (
+              <p className="ex-feed-system">
+                <span>{moment.name}</span>
+                <strong>+{moment.coins}</strong>
+                <span className="grant-caption">· gift from the streamer</span>
+              </p>
             ) : moment.kind === "GREETING" ? (
               <p className="ex-feed-system">
                 <span>{moment.name}</span>

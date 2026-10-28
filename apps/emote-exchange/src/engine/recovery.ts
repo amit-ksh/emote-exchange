@@ -10,6 +10,7 @@ import type {
 import { initialMarketState } from "./market.ts";
 
 export interface MarketRows {
+  grantRequestIds?: string[];
   checkpoint: string | null;
   traders: Trader[];
   listings: ListingWrite[];
@@ -143,6 +144,7 @@ export function restoreMarket(
     }
     state.lastTickAt = saved.lastTickAt;
     state.startedAt = saved.startedAt;
+    state.grantRequests = new Set(rows.grantRequestIds ?? []);
     state.paused = saved.paused;
     state.raidUntil = saved.raidUntil;
     state.pending = new Map(structuredClone(saved.pending));

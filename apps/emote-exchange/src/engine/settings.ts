@@ -1,4 +1,5 @@
 export interface MarketSettings {
+  GRANT_MAX: number;
   STREAM_RESTART_GAP: number;
   GREETING_BASE: number;
   GREETING_STREAK_STEP: number;
@@ -22,6 +23,7 @@ export interface MarketSettings {
   RAID_WINDOW_MS: number;
 }
 export const defaultMarketSettings: Readonly<MarketSettings> = Object.freeze({
+  GRANT_MAX: 10_000,
   STREAM_RESTART_GAP: 7_200_000,
   GREETING_BASE: 50,
   GREETING_STREAK_STEP: 10,
@@ -45,6 +47,7 @@ export const defaultMarketSettings: Readonly<MarketSettings> = Object.freeze({
   RAID_WINDOW_MS: 300_000,
 });
 const ranges: Record<keyof MarketSettings, readonly [number, number, boolean]> = {
+  GRANT_MAX: [1, 1_000_000, true],
   STREAM_RESTART_GAP: [7_200_000, 7_200_000, true],
   GREETING_BASE: [0, 1_000_000, true],
   GREETING_STREAK_STEP: [0, 1_000_000, true],

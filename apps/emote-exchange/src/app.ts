@@ -183,6 +183,37 @@ export function createExchangeRuntime({
         moments.map((moment) => ({ ...moment })),
       );
     publishState = () => publishMarket([]);
+    app.post("/api/market/grant", async (context) => {
+      const body: unknown = await context.req.json().catch(() => null);
+      if (
+        !body ||
+        typeof body !== "object" ||
+        !("userId" in body) ||
+        typeof body.userId !== "string" ||
+        !("amount" in body) ||
+        typeof body.amount !== "number" ||
+        !("requestId" in body) ||
+        typeof body.requestId !== "string"
+      )
+        return context.json({ error: "Choose a Trader and a valid whole-Coin amount." }, 400);
+      try {
+        market.receive({
+          type: "Grant",
+          id: `dashboard:${body.requestId}`,
+          userId: body.userId,
+          amount: body.amount,
+          requestId: body.requestId,
+          source: "dashboard",
+          origin: auth.publicState().broadcaster.connected ? "twitch" : "sim",
+        });
+        return context.json({ ok: true });
+      } catch {
+        return context.json(
+          { error: "Choose an existing Trader and an amount within the Grant limit." },
+          400,
+        );
+      }
+    });
     app.post("/api/market/action", async (context) => {
       const body: unknown = await context.req.json().catch(() => null);
       if (!body || typeof body !== "object" || !("type" in body))
@@ -216,7 +247,7 @@ export function createExchangeRuntime({
       const body: unknown = await context.req.json().catch(() => null);
       if (!body || typeof body !== "object" || Array.isArray(body))
         return context.json({ error: "Choose valid market settings." }, 400);
-      const keys = ["STARTING_COINS", "FEE", "TRADE_COOLDOWN_MS", "HEAT_HALF_LIFE"];
+      const keys = ["STARTING_COINS", "FEE", "TRADE_COOLDOWN_MS", "HEAT_HALF_LIFE", "GRANT_MAX"];
       const reset = Object.keys(body).length === 1 && "reset" in body && body.reset === true;
       if (!reset && Object.keys(body).some((key) => !keys.includes(key)))
         return context.json({ error: "Choose valid market settings." }, 400);

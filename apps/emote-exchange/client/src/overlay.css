@@ -656,3 +656,7 @@
   color: var(--ex-muted);
   flex: none;
 }
+.ex-feed-system .grant-caption {
+  flex: none;
+  color: var(--ex-muted);
+}

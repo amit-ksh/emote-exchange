@@ -37,6 +37,7 @@ export function createMarketRuntime(options: Options) {
     firstMessages: [],
     sessions: [],
     reset: false,
+    grants: [],
   };
   repo.commit(state, [recovery]);
   function receive(input: MarketInput) {

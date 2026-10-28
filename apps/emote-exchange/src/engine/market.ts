@@ -2,6 +2,7 @@ import type { ChatEvent, Emote, Say } from "@emote-exchange/twitch-kit";
 import type { AccountChanges } from "./accounts.ts";
 import { accountChanges, accountWrites, settleDelist } from "./accounts.ts";
 import { marketCommand } from "./commands.ts";
+import { grant, grantCommand } from "./grants.ts";
 import { greeting } from "./greetings.ts";
 import { priceEvents } from "./price-events.ts";
 import { advanceRewards, followOrRaid, observeMessage, touchTrader } from "./rewards.ts";
@@ -46,7 +47,7 @@ export interface Credit {
   at: number;
   origin: ChatEvent["origin"];
   userId: string;
-  kind: "delist" | "follow" | "visa" | "stipend" | "greeting";
+  kind: "delist" | "follow" | "visa" | "stipend" | "greeting" | "grant";
   coins: number;
 }
 export interface SessionSummary {
@@ -66,6 +67,17 @@ export type MarketInput =
   | ChatEvent
   | { type: "Tick" }
   | { type: "Settings"; settings: unknown }
+  | {
+      type: "Grant";
+      id: string;
+      origin: ChatEvent["origin"];
+      userId: string;
+      amount: number;
+      source: "chat" | "dashboard";
+      requestId: string;
+      replyUserId?: string;
+      replyParentMessageId?: string;
+    }
   | { type: "Pause"; id: string; origin: ChatEvent["origin"]; value: boolean }
   | { type: "Freeze"; id: string; origin: ChatEvent["origin"]; userId: string; value: boolean }
   | { type: "Delist"; id: string; origin: ChatEvent["origin"]; ticker: string }
@@ -111,6 +123,7 @@ interface PendingListing {
   eventId: string;
 }
 export interface MarketState {
+  grantRequests: Set<string>;
   streamNo: number;
   streamLastTickAt: number;
   settings: Readonly<MarketSettings>;
@@ -150,7 +163,8 @@ export interface MarketMoment {
     | "BELL"
     | "PAUSED"
     | "TOP"
-    | "GREETING";
+    | "GREETING"
+    | "GRANT";
   streak?: number;
   ticker?: string;
   price?: number;
@@ -192,6 +206,14 @@ export type MarketEffect =
       firstMessages: { userId: string; at: number }[];
       sessions: MarketSession[];
       reset: boolean;
+      grants: {
+        id: string;
+        at: number;
+        userId: string;
+        amount: number;
+        source: "chat" | "dashboard";
+        requestId: string;
+      }[];
     }
   | { type: "broadcast"; display: MarketDisplay; moments: MarketMoment[] }
   | MarketSay;
@@ -206,6 +228,7 @@ const commands = new Set([
   "freeze",
   "unfreeze",
   "greetings",
+  "grant",
 ]);
 function approvedEmote(value: Emote): Emote | null {
   if (
@@ -327,6 +350,7 @@ function persist(
     firstMessages: [],
     sessions: [],
     reset: false,
+    grants: [],
   };
 }
 function newListing(seed: SeedListing, now: number): Listing {
@@ -422,6 +446,7 @@ export function initialMarketState({
     startedAt: now,
     session: null,
     streamNo: 0,
+    grantRequests: new Set(),
     streamLastTickAt: now,
   };
 }
@@ -631,6 +656,20 @@ function applyMarket(
   const delisted: Listing[] = [];
   const accounts = accountChanges();
   advanceRewards(state, now, accounts);
+  if (
+    input.type === "Grant" ||
+    (input.type === "ChatMessage" &&
+      !input.foreign &&
+      !input.selfSent &&
+      input.command?.name === "grant")
+  ) {
+    const command = input.type === "Grant" ? { action: input } : grantCommand(state, input);
+    const result = command.action ? grant(state, command.action, now, accounts, moments) : null;
+    const write = accountWrites(persist(state, [], prunedListings), state, accounts);
+    if (result?.record) write.grants.push(result.record);
+    const say = result?.say ?? command.say;
+    return { state, effects: [write, broadcast(state, moments), ...(say ? [say] : [])] };
+  }
   if (input.type === "ChatMessage") observeMessage(state, input, now, accounts, moments);
   if (input.type === "Follow" || input.type === "Raid") {
     followOrRaid(state, input, now, accounts, moments);

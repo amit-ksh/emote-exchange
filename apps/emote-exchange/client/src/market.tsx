@@ -124,6 +124,7 @@ export function MarketPanel({ market, current }: { market?: OverlayMarket; curre
   );
 }
 export function TradersPanel({ market, current }: { market?: OverlayMarket; current: boolean }) {
+  const [grantTo, setGrantTo] = useState<OverlayMarket["traders"][number] | null>(null);
   const [search, setSearch] = useState("");
   const [feedback, setFeedback] = useState("");
   const [busy, setBusy] = useState(false);
@@ -160,6 +161,18 @@ export function TradersPanel({ market, current }: { market?: OverlayMarket; curr
       <p className="copy-feedback" role="status">
         {feedback}
       </p>
+      {grantTo && (
+        <GrantForm
+          key={grantTo.userId}
+          trader={grantTo}
+          current={current}
+          onClose={() => setGrantTo(null)}
+          onDone={() => {
+            setGrantTo(null);
+            setFeedback("Grant applied. The balance and overlay Feed have updated.");
+          }}
+        />
+      )}
       <div className="table-scroll">
         <table className="market-table">
           <caption className="sr-only">Traders by Net Worth</caption>
@@ -195,6 +208,14 @@ export function TradersPanel({ market, current }: { market?: OverlayMarket; curr
                   >
                     {row.frozen ? "Unfreeze" : "Freeze"} {row.name}
                   </button>
+                  <button
+                    className="button button-secondary"
+                    type="button"
+                    disabled={!current || busy}
+                    onClick={() => setGrantTo(row)}
+                  >
+                    Grant {row.name}
+                  </button>
                 </td>
               </tr>
             ))}
@@ -209,7 +230,121 @@ export function TradersPanel({ market, current }: { market?: OverlayMarket; curr
     </section>
   );
 }
+function GrantForm({
+  trader,
+  current,
+  onClose,
+  onDone,
+}: {
+  trader: OverlayMarket["traders"][number];
+  current: boolean;
+  onClose: () => void;
+  onDone: () => void;
+}) {
+  const [amount, setAmount] = useState(500);
+  const [limit, setLimit] = useState<number | null>(null);
+  const [confirm, setConfirm] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [feedback, setFeedback] = useState("");
+  const [requestId] = useState(() => crypto.randomUUID());
+  useEffect(() => {
+    const controller = new AbortController();
+    void fetch("/api/market/settings", { signal: controller.signal })
+      .then(async (response) => {
+        if (!response.ok) throw new Error();
+        const settings = readSettings(await response.json());
+        if (!settings) throw new Error();
+        setLimit(settings.GRANT_MAX);
+      })
+      .catch(() => {
+        if (!controller.signal.aborted)
+          setFeedback("Grant settings unavailable. Close and reopen this form to retry.");
+      });
+    return () => controller.abort();
+  }, []);
+  return (
+    <section className="inline-notice grant-form" aria-label={`Grant to ${trader.name}`}>
+      <h3>Grant Coins to {trader.name}</h3>
+      {!confirm ? (
+        <form
+          onSubmit={(event) => {
+            event.preventDefault();
+            setConfirm(true);
+          }}
+        >
+          <label>
+            Coins
+            <input
+              type="number"
+              required
+              min={1}
+              max={limit ?? 0}
+              step={1}
+              value={Number.isNaN(amount) ? "" : amount}
+              onChange={(event) => setAmount(event.target.valueAsNumber)}
+            />
+          </label>
+          <div className="action-row">
+            {[100, 500, 1000].map((value) => (
+              <button
+                className="button button-secondary"
+                type="button"
+                key={value}
+                disabled={limit === null || value > limit}
+                onClick={() => setAmount(value)}
+              >
+                {coins(value)}
+              </button>
+            ))}
+            <button
+              className="button button-primary"
+              type="submit"
+              disabled={!current || limit === null}
+            >
+              Review Grant
+            </button>
+            <button className="button button-secondary" type="button" onClick={onClose}>
+              Cancel
+            </button>
+          </div>
+        </form>
+      ) : (
+        <>
+          <p>
+            Give {trader.name} {coins(amount)} Coins?
+          </p>
+          <div className="action-row">
+            <button
+              className="button button-primary"
+              type="button"
+              disabled={!current || busy}
+              onClick={() => {
+                setBusy(true);
+                void marketPost("grant", { userId: trader.userId, amount, requestId })
+                  .then(onDone)
+                  .catch((error: Error) => setFeedback(error.message))
+                  .finally(() => setBusy(false));
+              }}
+            >
+              {busy ? "Giving…" : "Confirm"}
+            </button>
+            <button
+              className="button button-secondary"
+              type="button"
+              disabled={busy}
+              onClick={onClose}
+            >
+              Cancel
+            </button>
+          </div>
+        </>
+      )}
+      <p role="status">{feedback}</p>
+    </section>
+  );
+}
 const fields = [
+  ["GRANT_MAX", "Maximum Grant (Coins)", 1, 1_000_000, 1],
   ["STARTING_COINS", "Starting Coins", 0, 1_000_000_000, 1],
   ["FEE", "Trade fee (0.01 = 1%)", 0, 0.1, 0.0001],
   ["TRADE_COOLDOWN_MS", "Trade cooldown (milliseconds)", 0, 60_000, 1],
