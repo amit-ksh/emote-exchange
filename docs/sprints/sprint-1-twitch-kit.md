@@ -69,7 +69,7 @@ Run `twitch event trigger --help` to see which other events the mock supports. T
 
 ## K4 Helix client and chat-out queue
 
-**Complete — October 28, 2026.** The streamer clicked **Send test message** and confirmed it appeared in Twitch. The queue used the bot role and recorded HTTP 200 with `is_sent: true`. Both roles currently identify the same account; a distinct bot identity remains optional and unverified. Rate limits, bounded queues, quiet mode, preview isolation and safe Helix retries pass automated checks. See [K4 verification](../verification/k4-chat-out.md). K5–K7 remain pending.
+**Complete — October 28, 2026.** The streamer clicked **Send test message** and confirmed it appeared in Twitch. The queue used the bot role and recorded HTTP 200 with `is_sent: true`. Both roles currently identify the same account; a distinct bot identity remains optional and unverified. Rate limits, bounded queues, quiet mode, preview isolation and safe Helix retries pass automated checks. See [K4 verification](../verification/k4-chat-out.md).
 
 ```text
 Read docs/specs/twitch-kit.md sections 10 (Helix client) and 11 (Chat-out queue). Task K4.
@@ -81,6 +81,8 @@ Done when tests pass and a "Send test message" button on the ChatOutPanel posts 
 ```
 
 ## K5 Emote catalog
+
+**Complete — October 28, 2026.** All four providers, persisted fallback, case-sensitive precedence, normalizer lookup and 24 original bundled demo emotes are implemented. The streamer added `BOB` to the channel's 7TV set; refresh returned one ready channel emote and the dashboard exposed it alongside global provider counts. Offline startup and full/half overlay browser checks passed. See [K5 verification](../verification/k5-emotes.md). K6–K7 remain pending.
 
 ```text
 Read docs/specs/twitch-kit.md section 9 (Emote catalog) and docs/resources.md (third-party emote providers). Task K5.

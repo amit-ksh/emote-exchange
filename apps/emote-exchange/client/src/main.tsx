@@ -2,6 +2,7 @@ import { StrictMode, useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import type { FoundationSnapshot } from "../../src/public-state.ts";
 import { ChatOutPanel, readChatOut } from "./chat-out.tsx";
+import { EmoteCatalogPanel, readCatalog } from "./emotes.tsx";
 import { EventSubPanel, readEventSub } from "./eventsub.tsx";
 import "./styles.css";
 
@@ -39,6 +40,7 @@ function readSnapshot(value: unknown): FoundationSnapshot | null {
   const auth = readAuth(candidate.auth);
   const eventsub = readEventSub(candidate.eventsub);
   const chatOut = readChatOut(candidate.chatOut);
+  const catalog = readCatalog(candidate.catalog);
   if (
     candidate.v !== 1 ||
     !Number.isSafeInteger(candidate.seq) ||
@@ -53,7 +55,8 @@ function readSnapshot(value: unknown): FoundationSnapshot | null {
     !Array.isArray(candidate.moments) ||
     !auth ||
     !eventsub ||
-    !chatOut
+    !chatOut ||
+    !catalog
   ) {
     return null;
   }
@@ -86,6 +89,7 @@ function readSnapshot(value: unknown): FoundationSnapshot | null {
     auth,
     eventsub,
     chatOut,
+    catalog,
     moments: candidate.moments.filter(
       (moment): moment is FoundationSnapshot["moments"][number] =>
         typeof moment === "object" &&
@@ -356,6 +360,7 @@ function Dashboard() {
 
         <TwitchConnection auth={snapshot?.auth} />
         <EventSubPanel connection={snapshot?.eventsub} />
+        <EmoteCatalogPanel catalog={snapshot?.catalog} />
         <ChatOutPanel
           output={snapshot?.chatOut}
           connected={snapshot?.auth.broadcaster.connected ?? false}

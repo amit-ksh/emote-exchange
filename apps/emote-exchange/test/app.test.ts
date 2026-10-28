@@ -45,7 +45,25 @@ test("Exchange exposes an honest foundation-only display snapshot", async (conte
     headers: { Host: "localhost:4100" },
   });
   assert.equal(response.status, 200);
-  assert.deepEqual(await response.json(), {
+  const { catalog, ...snapshot } = await response.json();
+  assert.equal(catalog.ready, true);
+  assert.equal(catalog.demoCount, 24);
+  assert.equal(catalog.total, 24);
+  assert.ok(
+    catalog.examples.every((emote: { imageUrl: string }) =>
+      emote.imageUrl.startsWith("/demo-emotes/"),
+    ),
+  );
+  assert.equal(
+    (
+      await app.request("http://localhost:4100/api/emotes/refresh", {
+        method: "POST",
+        headers: { Host: "localhost:4100" },
+      })
+    ).status,
+    403,
+  );
+  assert.deepEqual(snapshot, {
     v: 1,
     seq: 0,
     app: "Emote Exchange",

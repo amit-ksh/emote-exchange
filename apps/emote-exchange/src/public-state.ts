@@ -1,5 +1,6 @@
 import type {
   AuthPublicState,
+  CatalogPublicState,
   ChatOutPublicState,
   EventSubPublicState,
   PublicMoment,
@@ -15,6 +16,7 @@ export interface FoundationDisplay {
   auth: AuthPublicState;
   eventsub: EventSubPublicState;
   chatOut: ChatOutPublicState;
+  catalog: CatalogPublicState;
 }
 
 export interface FoundationSnapshot extends FoundationDisplay {

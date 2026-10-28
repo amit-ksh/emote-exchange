@@ -66,9 +66,15 @@ try {
 
   const response = await fetch(`${origin}/api/snapshot`);
   assert.equal(response.headers.get("cache-control"), "no-store");
-  assert.deepEqual(await response.json(), {
+  const { catalog, seq, ...snapshot } = await response.json();
+  assert.ok(Number.isSafeInteger(seq) && seq >= 0);
+  assert.equal(catalog.ready, true);
+  assert.equal(catalog.demoCount, 24);
+  assert.ok(catalog.total >= 24);
+  for (const emote of catalog.examples.filter((entry) => entry.provider === "demo"))
+    assert.equal((await fetch(`${origin}${emote.imageUrl}`)).status, 200);
+  assert.deepEqual(snapshot, {
     v: 1,
-    seq: 0,
     app: "Emote Exchange",
     mode: "demo",
     phase: "foundation",
@@ -137,13 +143,13 @@ try {
     let delta = "";
     const deadline = setTimeout(() => controller.abort(), 5000);
     try {
-      while (!delta.includes("event: delta")) {
+      while (!delta.includes('"connectionChecks":1')) {
         const next = await reader.read();
         assert.equal(next.done, false);
         delta += new TextDecoder().decode(next.value);
       }
       assert.match(delta, /"connectionChecks":1/);
-      assert.match(delta, /"seq":1/);
+      assert.ok([...delta.matchAll(/"seq":(\d+)/g)].some((match) => Number(match[1]) > seq));
     } finally {
       clearTimeout(deadline);
     }

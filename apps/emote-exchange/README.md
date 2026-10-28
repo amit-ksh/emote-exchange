@@ -1,6 +1,6 @@
 # Emote Exchange
 
-A local play-money emote market for Twitch, displayed through an OBS browser source. K1–K4 are implemented: SQLite storage, guarded actions, bounded SSE, Twitch sign-in, incoming EventSub events, live counters and queued chat sending. The emote catalog, Simulator and market rules remain in [the implementation plan](../../docs/implementation-plan.md).
+A local play-money emote market for Twitch, displayed through an OBS browser source. K1–K5 are implemented: SQLite storage, guarded actions, bounded SSE, Twitch sign-in, incoming events, queued chat sending and cached emote catalogs. The Simulator and market rules remain in [the implementation plan](../../docs/implementation-plan.md).
 
 ## Run the foundation
 
@@ -43,6 +43,16 @@ Under **Test your chat connection**, click **Send test message** to post exactly
 **Preview without sending** adds the same text to **Would have said**, even while Twitch is connected. All simulated output takes that path. Without a broadcaster connection, live sending is disabled and app output stays local. **Quiet mode** pauses live sending and discards waiting live messages; its setting survives app restart. A request already delivered to Twitch cannot be recalled.
 
 The queue sends at most once per second and 18 times in any rolling 30 seconds, counting retry attempts too. Replies precede ambient output. Pending output expires after 30 seconds, duplicate text collapses, and diagnostics retain the latest 100 entries. Logs and counters reset on app restart; queued messages are not replayed. Twitch drop codes use a fixed safe vocabulary; unknown codes show `twitch_dropped`, never arbitrary provider error text. Incoming chat text is never added to this log.
+
+## Emote catalog
+
+**Your channel, in emotes** lists channel and global counts for Twitch, 7TV, BTTV and FFZ, with sample images. The total counts unique case-sensitive names after precedence: channel before global, then Twitch, 7TV, BTTV and FFZ. Bundled demo names are available alongside provider sets. Twitch emote fragments remain authoritative, including emotes absent from the catalog.
+
+Provider requests run in the background at startup and every 30 minutes. **Refresh emotes** requests an immediate update, useful after changing a channel set. **Cached** means a request failed and the last good set is still usable. **No channel set** covers an unconfigured provider or a 7TV profile without an active set. An empty configured set correctly shows zero. Channel caches are scoped to the connected broadcaster and are cleared when switching to another broadcaster; global caches remain reusable.
+
+All 24 original SVG demo emotes load from `client/public/demo-emotes/` before any request. Names match the filename without `.svg`, for example `DemoBull` and `DemoMoon`. With no keys and no network, these assets remain sufficient for upcoming simulator scenarios; optional public globals cannot delay startup. The simulator itself arrives in K6.
+
+To use your own 7TV emotes, sign in to 7TV with the connected Twitch account, add emotes to a set assigned to that channel, then refresh our catalog. Uploading new artwork is separate from adding existing emotes to a channel set. The live K5 check observed the channel emote `BOB` after this setup.
 
 ## Checks and troubleshooting
 

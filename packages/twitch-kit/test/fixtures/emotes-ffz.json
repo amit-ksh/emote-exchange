@@ -1,0 +1,24 @@
+[
+  {
+    "id": 9,
+    "code": "ZrehplaR",
+    "imageType": "png",
+    "images": {
+      "1x": "https://cdn.betterttv.net/frankerfacez_emote/9/1",
+      "2x": "https://cdn.betterttv.net/frankerfacez_emote/9/2",
+      "4x": "https://cdn.betterttv.net/frankerfacez_emote/9/4"
+    },
+    "animated": false
+  },
+  {
+    "id": 6,
+    "code": "YooHoo",
+    "imageType": "png",
+    "images": {
+      "1x": "https://cdn.betterttv.net/frankerfacez_emote/6/1",
+      "2x": "https://cdn.betterttv.net/frankerfacez_emote/6/2",
+      "4x": "https://cdn.betterttv.net/frankerfacez_emote/6/4"
+    },
+    "animated": false
+  }
+]

@@ -1,10 +1,12 @@
 import {
   createChatOut,
+  createEmoteCatalog,
   createEventSub,
   createHelix,
   createHttpApp,
   createOverlayBus,
   createTwitchAuth,
+  loadDemoCatalog,
   openStore,
 } from "@emote-exchange/twitch-kit";
 import type { FoundationDisplay } from "./public-state.ts";
@@ -47,6 +49,14 @@ export function createExchangeRuntime({
       },
     });
     const helix = createHelix({ auth, clientId, now });
+    const catalog = createEmoteCatalog({
+      store,
+      auth,
+      helix,
+      now,
+      demo: loadDemoCatalog(new URL("../client/public/demo-emotes/", import.meta.url)),
+      onChange: () => publishState(),
+    });
     const chatOut = createChatOut({
       auth,
       helix,
@@ -63,9 +73,11 @@ export function createExchangeRuntime({
       now,
       onChange: () => publishState(),
       wasSent: (messageId) => chatOut.wasSent(messageId),
+      lookupEmote: (word) => catalog.lookup(word),
     });
     syncAuth = () => {
       chatOut.syncAuth();
+      catalog.syncAuth();
       eventsub.syncAuth();
     };
     const projection: FoundationDisplay = {
@@ -78,6 +90,7 @@ export function createExchangeRuntime({
       auth: auth.publicState(),
       eventsub: eventsub.publicState(),
       chatOut: chatOut.publicState(),
+      catalog: catalog.publicState(),
     };
     if (!Number.isSafeInteger(projection.connectionChecks) || projection.connectionChecks < 0) {
       throw new Error("Stored local connection check count is invalid.");
@@ -100,11 +113,16 @@ export function createExchangeRuntime({
       auth: auth.publicState(),
       eventsub: eventsub.publicState(),
       chatOut: chatOut.publicState(),
+      catalog: catalog.publicState(),
     });
     publishState = () =>
       bus.publish({
         ...display(),
       });
+    app.post("/api/emotes/refresh", (context) => {
+      void catalog.refresh();
+      return context.json({ ok: true }, 202);
+    });
     app.post("/api/chat-out/test", (context) => {
       if (!auth.publicState().broadcaster.connected)
         return context.json({ error: "Connect the broadcaster before sending a live test." }, 409);
@@ -154,11 +172,13 @@ export function createExchangeRuntime({
       initialize: async () => {
         await auth.initialize();
         eventsub.syncAuth();
+        catalog.start();
       },
       maintenance: () => auth.maintenance(),
       close() {
         if (closed) return;
         closed = true;
+        catalog.close();
         chatOut.close();
         eventsub.close();
         helix.close();

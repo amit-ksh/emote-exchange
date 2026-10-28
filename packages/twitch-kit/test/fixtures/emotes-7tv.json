@@ -1,0 +1,70 @@
+{
+  "id": "01GD17VE2R000E0RPNH2V9Z16G",
+  "name": "Halloween Global Emotes",
+  "emotes": [
+    {
+      "id": "01FGH8NE3800064MEQW00DNBNG",
+      "name": "reckH",
+      "data": {
+        "id": "01FGH8NE3800064MEQW00DNBNG",
+        "name": "reckH",
+        "animated": false,
+        "host": {
+          "url": "//cdn.7tv.app/emote/01FGH8NE3800064MEQW00DNBNG",
+          "files": [
+            {
+              "name": "2x.webp",
+              "static_name": "2x.webp",
+              "width": 64,
+              "height": 64,
+              "frame_count": 1,
+              "size": 2626,
+              "format": "WEBP"
+            },
+            {
+              "name": "4x.webp",
+              "static_name": "4x.webp",
+              "width": 128,
+              "height": 128,
+              "frame_count": 1,
+              "size": 6320,
+              "format": "WEBP"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "01FSNK0GP000038GDBZ91HT6SQ",
+      "name": "PETPET",
+      "data": {
+        "id": "01FSNK0GP000038GDBZ91HT6SQ",
+        "name": "PETPET",
+        "animated": true,
+        "host": {
+          "url": "//cdn.7tv.app/emote/01FSNK0GP000038GDBZ91HT6SQ",
+          "files": [
+            {
+              "name": "2x.webp",
+              "static_name": "2x_static.webp",
+              "width": 64,
+              "height": 64,
+              "frame_count": 5,
+              "size": 8426,
+              "format": "WEBP"
+            },
+            {
+              "name": "4x.webp",
+              "static_name": "4x_static.webp",
+              "width": 128,
+              "height": 128,
+              "frame_count": 5,
+              "size": 14578,
+              "format": "WEBP"
+            }
+          ]
+        }
+      }
+    }
+  ]
+}
