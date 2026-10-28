@@ -1,6 +1,7 @@
 import { StrictMode, useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import type { FoundationSnapshot } from "../../src/public-state.ts";
+import { EventSubPanel, readEventSub } from "./eventsub.tsx";
 import "./styles.css";
 
 type ConnectionStatus = "connecting" | "connected" | "reconnecting";
@@ -35,19 +36,21 @@ function readSnapshot(value: unknown): FoundationSnapshot | null {
   if (typeof value !== "object" || value === null) return null;
   const candidate = value as Record<string, unknown>;
   const auth = readAuth(candidate.auth);
+  const eventsub = readEventSub(candidate.eventsub);
   if (
     candidate.v !== 1 ||
     !Number.isSafeInteger(candidate.seq) ||
     (candidate.seq as number) < 0 ||
     candidate.app !== "Emote Exchange" ||
-    candidate.mode !== "demo" ||
+    !["demo", "live"].includes(candidate.mode as string) ||
     candidate.phase !== "foundation" ||
     candidate.simulatorRunning !== false ||
     typeof candidate.overlayUrl !== "string" ||
     !Number.isSafeInteger(candidate.connectionChecks) ||
     (candidate.connectionChecks as number) < 0 ||
     !Array.isArray(candidate.moments) ||
-    !auth
+    !auth ||
+    !eventsub
   ) {
     return null;
   }
@@ -72,12 +75,13 @@ function readSnapshot(value: unknown): FoundationSnapshot | null {
     v: 1,
     seq: candidate.seq as number,
     app: "Emote Exchange",
-    mode: "demo",
+    mode: candidate.mode as FoundationSnapshot["mode"],
     phase: "foundation",
     simulatorRunning: false,
     overlayUrl: candidate.overlayUrl,
     connectionChecks: candidate.connectionChecks as number,
     auth,
+    eventsub,
     moments: candidate.moments.filter(
       (moment): moment is FoundationSnapshot["moments"][number] =>
         typeof moment === "object" &&
@@ -190,7 +194,7 @@ function TwitchConnection({ auth }: { auth: FoundationSnapshot["auth"] | undefin
             ? "Twitch connection failed. Start a new login attempt."
             : result === "connected"
               ? "Twitch account connected."
-              : "Authorize your channel to prepare for live chat integration."}
+              : "Authorize your channel to receive live Twitch events."}
       </p>
       {!auth?.configured ? (
         <p className="copy-feedback">
@@ -227,8 +231,7 @@ function TwitchConnection({ auth }: { auth: FoundationSnapshot["auth"] | undefin
         ))
       )}
       <p className="copy-feedback">
-        Live chat reception arrives in the next milestone. The simulator and market are still
-        planned.
+        Incoming Twitch events stay on this machine. The simulator and market are still planned.
       </p>
     </section>
   );
@@ -285,7 +288,9 @@ function Dashboard() {
         <Wordmark />
         <div className="header-context">
           <span className="local-label">LOCAL WORKSPACE</span>
-          <span className="mode-tag">Demo mode</span>
+          <span className="mode-tag">
+            {snapshot?.mode === "live" ? "Twitch connected" : "Demo mode"}
+          </span>
         </div>
       </header>
 
@@ -311,8 +316,8 @@ function Dashboard() {
               {snapshot ? "Local foundation ready." : "Checking the local server."}
             </h2>
             <p>
-              Twitch sign-in, the dashboard, and the transparent overlay are ready. Live chat, the
-              simulator, and trading come next.
+              Twitch sign-in, incoming events, and the transparent overlay are ready. The simulator
+              and trading come next.
             </p>
             <div className="connection-status" role="status">
               <span>{connectionLabel}</span>
@@ -346,6 +351,7 @@ function Dashboard() {
         </section>
 
         <TwitchConnection auth={snapshot?.auth} />
+        <EventSubPanel connection={snapshot?.eventsub} />
         <section className="overlay-setup" aria-labelledby="overlay-title">
           <div className="section-heading">
             <div>
@@ -421,7 +427,7 @@ function Dashboard() {
                 <h3>Connect the channel</h3>
                 <p>Twitch login, chat events, and your emote catalog.</p>
               </div>
-              <span className="planned-label">Planned</span>
+              <span className="planned-label">In progress</span>
             </li>
             <li>
               <span className="step-index" aria-hidden="true">
@@ -456,7 +462,7 @@ function Dashboard() {
 }
 
 function Overlay() {
-  useFoundation("overlay");
+  const { snapshot } = useFoundation("overlay");
   const [scale, setScale] = useState(measureOverlayScale);
 
   useEffect(() => {
@@ -468,14 +474,14 @@ function Overlay() {
   return (
     <main className="overlay-viewport" aria-label="Emote Exchange OBS overlay">
       <div className="overlay-canvas" style={{ transform: `scale(${scale})` }}>
-        <section className="foundation-label" aria-label="Demo mode, market coming next">
+        <section className="foundation-label" aria-label="Emote Exchange, market coming next">
           <span className="overlay-brand-mark" aria-hidden="true">
             EX
           </span>
           <div>
             <h1>Emote Exchange</h1>
             <p>
-              <span>Demo mode</span>
+              <span>{snapshot?.mode === "live" ? "Twitch connected" : "Demo mode"}</span>
               <span className="label-separator" aria-hidden="true">
                 /
               </span>

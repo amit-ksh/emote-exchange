@@ -252,6 +252,9 @@ export function createTwitchAuth(options: AuthOptions) {
     accessToken(role: AuthRole) {
       return accounts[role].connected ? row(role)?.access_token : undefined;
     },
+    identity(role: AuthRole) {
+      return accounts[role].connected ? row(role)?.user_id : undefined;
+    },
     publicState(): AuthPublicState {
       return structuredClone({ configured, ...accounts });
     },

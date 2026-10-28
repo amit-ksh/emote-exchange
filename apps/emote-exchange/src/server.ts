@@ -12,10 +12,12 @@ try {
 }
 
 try {
-  const { port, dataDir, publicOrigin } = readConfig(process.env);
+  const { port, dataDir, publicOrigin, wsUrl, subscriptionsUrl } = readConfig(process.env);
   const runtime = createExchangeRuntime({
     port,
     publicOrigin,
+    wsUrl,
+    subscriptionsUrl,
     clientId: process.env.TWITCH_CLIENT_ID ?? "",
     clientSecret: process.env.TWITCH_CLIENT_SECRET ?? "",
     filename: join(dataDir, "emote-exchange.sqlite"),
@@ -34,7 +36,7 @@ try {
     runtime.close();
     throw error;
   }
-  console.log(`Emote Exchange foundation · Demo mode · http://localhost:${port}`);
+  console.log(`Emote Exchange foundation · http://localhost:${port}`);
   console.log(`OBS overlay: http://127.0.0.1:${port}/overlay`);
   const maintenance = setInterval(() => {
     void runtime.maintenance().catch(() => {});

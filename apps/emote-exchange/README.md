@@ -1,6 +1,6 @@
 # Emote Exchange
 
-A local play-money emote market for Twitch, displayed through an OBS browser source. The current build includes the local foundation plus K1: SQLite storage, validated settings, guarded actions and bounded SSE updates. Twitch login, the Simulator and market rules are planned in [the implementation plan](../../docs/implementation-plan.md).
+A local play-money emote market for Twitch, displayed through an OBS browser source. K1–K3 are implemented: SQLite storage, guarded actions, bounded SSE, Twitch sign-in, incoming EventSub events and live counters. Queued sending, the emote catalog, Simulator and market rules remain in [the implementation plan](../../docs/implementation-plan.md).
 
 ## Run the foundation
 
@@ -30,7 +30,11 @@ Add a Browser Source at `http://127.0.0.1:4100/overlay`, width 1920, height 1080
 
 ## Twitch sign-in
 
-Follow [the setup guide](../../docs/setup-guide.md) to register one confidential Twitch app. Copy `.env.example` to `.env` and keep secrets local. Restart, click **Connect Twitch** under Broadcaster, then sign in and approve the permissions. Connected accounts are validated and restored after restart. **Connect bot** is optional; each account has a Disconnect button. Live chat and the market remain later milestones, so Demo mode still labels the foundation.
+Follow [the setup guide](../../docs/setup-guide.md) to register one confidential Twitch app. Copy `.env.example` to `.env` and keep secrets local. Restart, click **Connect Twitch** under Broadcaster, then sign in and approve the permissions. Connected accounts are validated and restored after restart. **Connect bot** is optional; each account has a Disconnect button.
+
+After broadcaster login, the incoming-events panel should show **EventSub connected** and five **enabled** subscriptions. Type in your channel’s Twitch chat and check that **Live events** and **Chat messages** increase. The browser receives counts and fixed connection status; incoming chat text stays server-side. Counters reset on app restart. The header and overlay show **Twitch connected** when authorized; without credentials they show **Demo mode**. Market widgets and simulated scenarios are still pending.
+
+EventSub recovers from lost connections with backoff and recreates subscriptions. Twitch reconnect handoffs retain subscriptions without creating duplicates. Missed events during a lost connection cannot be replayed. For a local Twitch CLI mock, override both `EVENTSUB_WS_URL` and `EVENTSUB_SUBSCRIPTIONS_URL` as shown in [K3](../../docs/sprints/sprint-1-twitch-kit.md). Overrides accept only the official Twitch endpoints or explicit HTTP/WS loopback mock destinations.
 
 ## Checks and troubleshooting
 

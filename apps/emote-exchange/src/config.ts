@@ -1,10 +1,13 @@
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { eventSubEndpoints } from "@emote-exchange/twitch-kit";
 
 export interface ExchangeConfig {
   port: number;
   publicOrigin: string;
   dataDir: string;
+  wsUrl: string;
+  subscriptionsUrl: string;
 }
 
 export function readConfig(environment: Record<string, string | undefined>): ExchangeConfig {
@@ -22,5 +25,10 @@ export function readConfig(environment: Record<string, string | undefined>): Exc
     throw new Error("DATA_DIR must be a nonempty local path.");
   }
   const dataDir = resolve(fileURLToPath(new URL("../", import.meta.url)), dataPath);
-  return { port, publicOrigin, dataDir };
+  return {
+    port,
+    publicOrigin,
+    dataDir,
+    ...eventSubEndpoints(environment.EVENTSUB_WS_URL, environment.EVENTSUB_SUBSCRIPTIONS_URL),
+  };
 }

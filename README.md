@@ -6,7 +6,7 @@ This repository focuses on one Codex x TwitchCon hackathon entry. The plan is to
 
 ## Status
 
-The documentation has been reviewed for the single-app scope. The initial app setup is the foundation milestone; live Twitch integration, market rules and the complete overlay are tracked separately in [the sprint plan](docs/sprints/README.md). A running scaffold does not mean those product features have shipped.
+The single-app plan, local foundation and K1–K3 are complete: private SQLite storage, guarded HTTP actions, bounded SSE, Twitch OAuth and incoming EventSub events. A live chat message has been verified in the dashboard counter. Queued chat sending, emote catalogs, simulation, market rules and the complete overlay remain in [the sprint plan](docs/sprints/README.md).
 
 ## Quick start
 
@@ -19,7 +19,7 @@ pnpm dev:exchange
 
 Dashboard: [http://localhost:4100](http://localhost:4100). OBS browser source: [http://127.0.0.1:4100/overlay](http://127.0.0.1:4100/overlay), at 1920 × 1080. Demo mode starts without Twitch credentials. See the app README for the features available in the current milestone.
 
-To configure Twitch when that milestone is implemented, copy `apps/emote-exchange/.env.example` to `.env`, register one Twitch application, and follow [the setup guide](docs/setup-guide.md).
+To configure Twitch, copy `apps/emote-exchange/.env.example` to `.env`, register one Twitch application, and follow [the setup guide](docs/setup-guide.md).
 
 ## Structure
 

@@ -671,3 +671,34 @@ html[data-view="overlay"] #root {
     scale: 1;
   }
 }
+.eventsub-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 32px;
+  margin: 24px 0;
+}
+.eventsub-stats dt {
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+.eventsub-stats dd {
+  margin: 8px 0 0;
+  font-size: 1.5rem;
+  font-variant-numeric: tabular-nums;
+}
+.subscription-list {
+  list-style: none;
+  padding: 0;
+  margin: 24px 0 0;
+}
+.subscription-item {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 0;
+  border-top: 1px solid var(--line);
+  font-size: 0.9rem;
+}
+.subscription-enabled {
+  color: var(--accent);
+}

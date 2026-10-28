@@ -11,6 +11,8 @@ test("configuration defaults to the documented local origin", () => {
     port: 4100,
     publicOrigin: "http://localhost:4100",
     dataDir: resolve(appDirectory, "data"),
+    wsUrl: "wss://eventsub.wss.twitch.tv/ws?keepalive_timeout_seconds=30",
+    subscriptionsUrl: "https://api.twitch.tv/helix/eventsub/subscriptions",
   });
 });
 
@@ -19,8 +21,29 @@ test("configuration accepts a different port and its exact loopback origin", () 
     port: 4111,
     publicOrigin: "http://127.0.0.1:4111",
     dataDir: resolve(appDirectory, "data"),
+    wsUrl: "wss://eventsub.wss.twitch.tv/ws?keepalive_timeout_seconds=30",
+    subscriptionsUrl: "https://api.twitch.tv/helix/eventsub/subscriptions",
   });
   assert.equal(readConfig({ PORT: "4111" }).publicOrigin, "http://localhost:4111");
+});
+
+test("EventSub config accepts loopback mocks, preserves query parameters and rejects credential destinations", () => {
+  const config = readConfig({
+    EVENTSUB_WS_URL: "ws://127.0.0.1:8080/ws?mock=yes",
+    EVENTSUB_SUBSCRIPTIONS_URL: "http://127.0.0.1:8080/eventsub/subscriptions",
+  });
+  assert.equal(config.wsUrl, "ws://127.0.0.1:8080/ws?mock=yes&keepalive_timeout_seconds=30");
+  for (const value of [
+    "https://evil.example/subscriptions",
+    "http://127.0.0.1.evil.example/",
+    "https://api.twitch.tv/evil",
+    "http://user:pass@localhost:8080/subscriptions",
+  ])
+    assert.throws(
+      () => readConfig({ EVENTSUB_SUBSCRIPTIONS_URL: value }),
+      /EVENTSUB_SUBSCRIPTIONS_URL/,
+    );
+  assert.throws(() => readConfig({ EVENTSUB_WS_URL: "ws://evil.example/ws" }), /EVENTSUB_WS_URL/);
 });
 
 test("relative DATA_DIR is resolved against the app directory", () => {

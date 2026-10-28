@@ -55,6 +55,21 @@ test("Exchange exposes an honest foundation-only display snapshot", async (conte
     overlayUrl: "http://127.0.0.1:4100/overlay",
     connectionChecks: 0,
     moments: [],
+    eventsub: {
+      status: "disconnected",
+      sessionStartedAt: null,
+      lastEventAt: null,
+      eventCount: 0,
+      chatMessageCount: 0,
+      issue: null,
+      subscriptions: [
+        "channel.chat.message",
+        "channel.follow",
+        "channel.raid",
+        "stream.online",
+        "stream.offline",
+      ].map((type) => ({ type, status: "disconnected", httpStatus: null })),
+    },
     auth: {
       configured: false,
       broadcaster: { connected: false, login: null, scopes: [], reconnect: false },

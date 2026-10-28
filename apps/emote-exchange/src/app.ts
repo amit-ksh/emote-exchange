@@ -1,4 +1,5 @@
 import {
+  createEventSub,
   createHttpApp,
   createOverlayBus,
   createTwitchAuth,
@@ -13,6 +14,8 @@ interface ExchangeRuntimeOptions {
   clientId?: string;
   clientSecret?: string;
   publicOrigin?: string;
+  wsUrl?: string;
+  subscriptionsUrl?: string;
 }
 
 export function createExchangeRuntime({
@@ -22,19 +25,34 @@ export function createExchangeRuntime({
   clientId = "",
   clientSecret = "",
   publicOrigin = `http://localhost:${port}`,
+  wsUrl,
+  subscriptionsUrl,
 }: ExchangeRuntimeOptions = {}) {
   const store = openStore({ filename });
   try {
     const settings = store.settings({ connectionChecks: 0 });
-    let publishAuth = () => {};
+    let publishState = () => {};
+    let syncAuth = () => {};
     const auth = createTwitchAuth({
       store,
       clientId,
       clientSecret,
       publicOrigin,
       now,
-      onChange: () => publishAuth(),
+      onChange: () => {
+        syncAuth();
+        publishState();
+      },
     });
+    const eventsub = createEventSub({
+      auth,
+      clientId,
+      wsUrl,
+      subscriptionsUrl,
+      now,
+      onChange: () => publishState(),
+    });
+    syncAuth = () => eventsub.syncAuth();
     const projection: FoundationDisplay = {
       app: "Emote Exchange",
       mode: "demo",
@@ -43,6 +61,7 @@ export function createExchangeRuntime({
       overlayUrl: `http://127.0.0.1:${port}/overlay`,
       connectionChecks: settings.get("connectionChecks"),
       auth: auth.publicState(),
+      eventsub: eventsub.publicState(),
     };
     if (!Number.isSafeInteger(projection.connectionChecks) || projection.connectionChecks < 0) {
       throw new Error("Stored local connection check count is invalid.");
@@ -58,11 +77,16 @@ export function createExchangeRuntime({
     });
     const app = createHttpApp({ port, bus });
     auth.mount(app);
-    publishAuth = () =>
+    const display = (): FoundationDisplay => ({
+      ...projection,
+      mode: auth.publicState().broadcaster.connected ? "live" : "demo",
+      connectionChecks: settings.get("connectionChecks"),
+      auth: auth.publicState(),
+      eventsub: eventsub.publicState(),
+    });
+    publishState = () =>
       bus.publish({
-        ...projection,
-        connectionChecks: settings.get("connectionChecks"),
-        auth: auth.publicState(),
+        ...display(),
       });
     app.post("/api/setup/check", (context) => {
       const count = settings.get("connectionChecks");
@@ -70,7 +94,7 @@ export function createExchangeRuntime({
         return context.json({ error: "Local connection check limit reached." }, 409);
       }
       settings.set("connectionChecks", count + 1);
-      bus.publish({ ...projection, connectionChecks: count + 1, auth: auth.publicState() }, [
+      bus.publish(display(), [
         { id: `connection-check:${count + 1}`, at: now(), kind: "connection-check" },
       ]);
       return context.json({ ok: true });
@@ -78,11 +102,15 @@ export function createExchangeRuntime({
     let closed = false;
     return {
       app,
-      initialize: () => auth.initialize(),
+      initialize: async () => {
+        await auth.initialize();
+        eventsub.syncAuth();
+      },
       maintenance: () => auth.maintenance(),
       close() {
         if (closed) return;
         closed = true;
+        eventsub.close();
         auth.close();
         bus.close();
         store.close();

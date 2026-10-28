@@ -1,0 +1,42 @@
+{
+  "metadata": {
+    "message_id": "delivery-chat-1",
+    "message_type": "notification",
+    "message_timestamp": "2026-10-28T00:00:00.123456789Z"
+  },
+  "payload": {
+    "subscription": {
+      "type": "channel.chat.message",
+      "version": "1",
+      "condition": { "broadcaster_user_id": "100", "user_id": "100" }
+    },
+    "event": {
+      "broadcaster_user_id": "100",
+      "chatter_user_id": "200",
+      "chatter_user_login": "viewer",
+      "chatter_user_name": "Viewer",
+      "message_id": "chat-message-1",
+      "color": "#12AB34",
+      "badges": [{ "set_id": "moderator", "id": "1", "info": "" }],
+      "message": {
+        "text": "!BUY Kappa 2 @Friend Party",
+        "fragments": [
+          { "type": "text", "text": "!BUY " },
+          {
+            "type": "emote",
+            "text": "Kappa",
+            "emote": { "id": "25", "format": ["static", "animated"] }
+          },
+          { "type": "text", "text": " 2 " },
+          {
+            "type": "mention",
+            "text": "@Friend",
+            "mention": { "user_id": "300", "user_login": "friend", "user_name": "Friend" }
+          },
+          { "type": "text", "text": " Party" }
+        ]
+      },
+      "source_broadcaster_user_id": null
+    }
+  }
+}

@@ -8,7 +8,7 @@ Order matters for K1-K3. K4 and K5 can be delegated independently once their pub
 
 ## K1 Store, settings and the HTTP security baseline
 
-**Complete — October 28, 2026.** Storage, settings, bounded SSE and the guarded dashboard check are implemented. All 27 tests and the required checks pass. Development and production browser verification passed at port 4100. See [K1 verification](../verification/k1-platform.md). K2–K7 remain pending.
+**Complete — October 28, 2026.** Storage, settings, bounded SSE and the guarded dashboard check are implemented. All 27 tests at that milestone and the required checks passed. Development and production browser verification passed at port 4100. See [K1 verification](../verification/k1-platform.md).
 
 ```text
 Read AGENTS.md and docs/specs/twitch-kit.md sections 13 (Store), 14 (Overlay bus), 15 (HTTP server and security). Task K1.
@@ -40,6 +40,8 @@ Done when tests pass and broadcaster login survives restart on the Emote Exchang
 **You check:** log in as broadcaster and, if available, as bot. Each connected role survives restart. Disconnect removes that role without stopping demo mode.
 
 ## K3 EventSub client and ChatEvents
+
+**Complete — October 28, 2026.** Real saved login restored, EventSub connected, all five subscriptions enabled, and the streamer's chat message increased both counters from 0 to 1. Protocol, normalizer and runner checks pass; raw chat remains server-side. See [K3 verification](../verification/k3-eventsub.md). K4–K7 remain pending.
 
 ```text
 Read docs/specs/twitch-kit.md sections 7 (EventSub client) and 8 (ChatEvents), and ADR 0006. Task K3.
