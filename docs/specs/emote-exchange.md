@@ -15,6 +15,7 @@ Every emote chat uses becomes a listing. Its price follows how much of chat's at
 - Emote spam is the most common thing Twitch chat does, and today it goes nowhere. Here it moves a market.
 - Viewers see their names on stream: trades in the feed, the leaderboard, "@ann sold the top".
 - Portfolios carry across streams, which gives viewers a reason to come back.
+- A greeting streak gives viewers a reason to show up every stream and say hello, and Grants let the streamer reward someone live.
 - It works for any channel, including brand-new ones (Twitch global emotes plus free 7TV/BTTV/FFZ sets), with 3 chatters or 3,000.
 
 **Product distinction:** the market is driven by chat's own behavior. Treat any novelty claim as unverified until primary-source research is recorded; the submission must describe what shipped rather than claim there are no similar products.
@@ -132,6 +133,8 @@ Why attention share and not raw counts: it moves in a 3-person chat and a 3,000-
 | Follow bonus (creates the trader if new), plus a feed item "new investor @x" | 200 |
 | Raid visa: for 5 minutes after a raid, each chatter whose very first message arrives gets the bonus, plus a feed item. First-time chatters right after a raid are our best guess at raiders, because Twitch doesn't say who came along. | 500 |
 
+Greetings (5.11) and Grants (5.12) are the other two ways to earn Coins.
+
 ### 5.7 Halts, moon, crash
 
 - **Halt:** if a price is up 60% or more, or down 40% or more, against 60 seconds earlier, trading on that ticker halts for 30 s. At most one halt per ticker per 5 minutes. Prices keep updating during a halt.
@@ -168,6 +171,32 @@ Each target is an automated simulator scenario in the test suite. The fixed fixt
 
 **P0 planning gate (E0):** turn these fixtures into a dependency-free executable numerical experiment before implementing E1. Record measured endpoints and the constants used. Preserve the target thresholds. If the formula and targets cannot be satisfied together, record the failing fixture and a worked result, then agree a spec/ADR change before engine implementation; do not quietly weaken a target. The analytical B4 clamp/decay check can run before trading exists. These experiments validate feasibility; engine tests still exercise the public engine interface test-first.
 
+### 5.11 Greetings and streaks (P1)
+
+A viewer says hello once per Stream to claim Coins. Saying hello on consecutive Streams builds a Streak, and the Streak raises the bonus.
+
+- **Stream:** one broadcast night. An opening Bell starts a new Stream unless the previous Stream Session ended less than `STREAM_RESTART_GAP` = 2 h earlier (its closing Bell, or its last tick if it never closed). A dropped connection or an app restart therefore continues the same Stream. The demo-mode Open bell button always starts a new Stream, so a Streak can be demonstrated.
+- **Claim:** `!greetings <words>`, with at least one word after the command, for example `!greetings good morning`. The words are never judged. They are not stored, not echoed in any reply, not broadcast and not shown on the overlay: Twitch chat already shows them, and the Exchange only needs to know a greeting happened.
+- **Window:** a claim needs an open Stream Session (the Bell has rung) and a Trader who is not frozen. A Trader can claim once per Stream. A second claim in the same Stream changes nothing and gets one reply.
+- **Streak:** the number of consecutive Streams in which the Trader claimed. A first claim, or a claim after missing at least one whole Stream, sets it to 1. A claim in the Stream right after their last claim adds 1.
+- **Bonus:** `GREETING_BASE` + `GREETING_STREAK_STEP` * (min(Streak, `GREETING_STREAK_CAP`) - 1) Coins, with defaults 50, 10 and 10: 50 Coins at Streak 1, 100 at Streak 6, 140 from Streak 10. Credits saturate at the Coin cap (section 12). Like every default it is tuned in E6.
+- **Shown Streak:** a Streak is shown only while it is alive, meaning the Trader's last claim was in the current Stream or the one before it. Once a whole Stream passes without a claim the Streak is not shown, and the next claim restarts it at 1.
+- **Replies** (fixed templates through the chat-out queue, within the reply budget): a claim answers "@ann good to see you. Streak 4, +80 Coins."; a repeat answers "@ann you already said hello this Stream. Streak 4."; a bare `!greetings` answers "Say hello with a few words: !greetings good morning"; outside an open Stream Session it answers that the market is closed. Simulated Traders never reply to Twitch.
+- **Where the Streak shows:** the `!portfolio` reply and the portfolio card (P1), the Feed item "ann greeted · streak 4 · +80", and the dashboard Traders list. The overlay Board is unchanged, because its 24 px rows have no room for a badge.
+- A greeting is a command, so it adds no Heat and no Stipend minute (5.2). A Season reset clears Streaks along with the Traders.
+
+### 5.12 Grants (P1)
+
+The streamer can give a Trader Coins live, for a good moment, a giveaway or a comeback.
+
+- **Who:** the broadcaster only, from chat (`!grant @user N`) or from the dashboard Traders list. Mods cannot grant by default.
+- **Amount:** a whole number from 1 to `GRANT_MAX` (default 10,000, a validated setting). Zero, negative, fractional and non-numeric amounts are rejected with no change. Credits saturate at the Coin cap (section 12) and record the applied amount.
+- **Target:** the command's mention, by the mentioned user's ID, or else an exact case-insensitive login match for a typed name. The target must already be a Trader. An unknown name is rejected with a reply, and no Trader is created.
+- **Effect:** the Trader's Coins rise by the amount. It is not a Trade, adds no Heat and does not touch Prices.
+- **Record:** every grant writes one `grants` row (section 10). A repeated `request_id` credits once: the dashboard sends one per click, and chat uses the message ID.
+- **Feedback:** a Feed item "ann +500 · gift from the streamer" and one reply "@ann received 500 Coins from the streamer." through the chat-out queue. Grants to a simulated Trader never reply to Twitch.
+- **Dashboard:** a Grant action on each Traders row opens a small form with an amount field and quick amounts (100, 500, 1,000), then shows "Give ann 500 Coins?" with a Confirm button. It posts through the guarded route (Origin and `X-CTA`).
+
 ## 6. Commands
 
 **Viewers**
@@ -175,13 +204,16 @@ Each target is an automated simulator scenario in the test suite. The fixed fixt
 | Command | Result |
 |---|---|
 | `!buy T Q` / `!sell T Q` | Trade (5.5). Feed toast, plus a reply (rate-limited) |
-| `!portfolio` (alias `!pf`) | P0 reply: "@ann 1,240 coins, stonks x10 (+12%), net worth 2,035". P1 additionally shows a portfolio card for 6 s. |
+| `!portfolio` (alias `!pf`) | P0 reply: "@ann 1,240 coins, stonks x10 (+12%), net worth 2,035". A live Streak (5.11) adds ", streak 4" to the end. P1 additionally shows a portfolio card for 6 s, with the Streak. |
 | `!top` | Overlay leaderboard pulses, plus a reply listing the top 3 |
 | `!market` | Reply: how to play, plus the 5 hottest tickers |
+| `!greetings <words>` | P1: claim the Greeting bonus once per Stream and build a Streak (5.11). Feed item, plus a reply |
 
 **Mods and the broadcaster**
 
 `!market pause` · `!market resume` · `!delist T` · `!freeze @user` · `!unfreeze @user`
+
+**Broadcaster only:** `!grant @user N` (P1, 5.12)
 
 **Reply budget**
 
@@ -201,9 +233,9 @@ One page, `/overlay`, a transparent 1920 x 1080 canvas made of widgets. Paramete
 | **Tape** | bottom strip, full width, 64 high | Scrolls at 60 px/s. Each item shows the emote image (40 px), ticker, price, and session change with an up or down arrow. Halted items show a pause mark. Empty state: "Two chatters list an emote. Type !market". |
 | **Chart** | top-right, 520 x 300 | The hottest listing (switches at most every 20 s, with a crossfade): a 10-minute line/area chart, a big price, the change %, and a 64 px emote. |
 | **Board** | right, under the chart, 520 x 260 | Top 5 traders by net worth: rank, name in their chat color, net worth, session change. A smooth reorder when ranks change. |
-| **Feed** | left, above the tape, 480 x 260 | Last 5 events as toasts ("@ann BUY 5 stonks @ 132.40", follows, visas, delists). They slide in and fade after 8 s. |
+| **Feed** | left, above the tape, 480 x 260 | Last 5 events as toasts ("@ann BUY 5 stonks @ 132.40", follows, visas, delists, and in P1 greetings such as "ann greeted · streak 4 · +80" and grants such as "ann +500 · gift from the streamer"). They slide in and fade after 8 s. |
 | **Banners** | top-center, 900 x 140 | IPO, HALT, MOON, CRASH, RAID, BELL, DELIST, PAUSED. One at a time, 4 s each, queued. Priority: RAID > HALT > MOON/CRASH > IPO > the rest. |
-| **Cards (P1)** | center-left, 420 x 220 | Portfolio card for 6 s after `!portfolio`; at most 20 pending, replacing an older pending card for the same Trader, then dropping the oldest on overflow. |
+| **Cards (P1)** | center-left, 420 x 220 | Portfolio card (with the Streak while it is alive) for 6 s after `!portfolio`; at most 20 pending, replacing an older pending card for the same Trader, then dropping the oldest on overflow. |
 | **SIM badge** | top-left corner, small | Shown only while the simulator runs. |
 
 **Art direction**
@@ -248,7 +280,7 @@ Art direction updated by the streamer's October 28 redesign request; [the detail
 - **Setup checklist:** Connect Twitch, Overlay in OBS (ticks when an overlay client connects to SSE), Go live (ticks on `stream.online`).
 - **twitch-kit panels:** connection, overlay URL, simulator, chat-out.
 - **Market table:** every listing with heat, price, session change and holders. Delist button.
-- **Traders:** search, coins, net worth, freeze/unfreeze.
+- **Traders:** search, coins, net worth, freeze/unfreeze. P1 adds the Streak and a Grant action (5.12).
 - **Settings:** P0 exposes Starting Coins, Fee, trade cooldown and Heat half-life with validated ranges and reset-to-default. Other defaults remain in the validated server settings object; the full form is P1.
 - **Demo controls:** Open bell, Close bell, Fake raid (N viewers), Fake follow.
 - **Season:** P0 reset (type the word RESET to confirm). CSV export and JSON backup export/import are P1.
@@ -263,6 +295,7 @@ These are registered with twitch-kit's simulator. Each also backs an automated t
 | Pump and dump | 15 chatters spam one emote for 60 s, early buyers sell into the spike, it halts, then crashes |
 | Solo spammer | A prelisted market shows one Chatter spamming A while three others Use B once, matching B2. The display explains why the group wins. |
 | Raid wave | Raid event with 40 viewers, 20 new chatters arrive and claim visas |
+| Greeting streak (P1) | 12 chatters over 4 Streams (Open and Close bell between them): most greet every Stream and two skip one. Streaks build and break, Feed items appear and the bonus grows |
 | Quiet market | Chat drops to 0.2 msg/s for 5 minutes |
 | Soak | 50 msg/s, 500 Chatters, 24 Listings, 30 minutes after a 10-minute warm-up; fixed participant and emote sets |
 
@@ -272,18 +305,19 @@ The tables, in addition to twitch-kit's shared tables.
 
 | Table | Key | Fields |
 |---|---|---|
-| `traders` | user_id | login, display_name, color, coins (integer), frozen, created_at, last_active_at, is_sim |
+| `traders` | user_id | login, display_name, color, coins (integer), frozen, created_at, last_active_at, is_sim, greeting_streak (integer, P1), last_greeting_stream_no (integer or null, P1) |
 | `listings` | ticker | emote_key, provider, image_url, status (active, delisted), ipo_at, session_open_price, base, last_price, halted_until, last_use_at |
 | `holdings` | user_id + ticker | shares (integer), cost_basis (integer coins) |
 | `trades` | id | at, user_id, ticker, side, shares, price, coins |
 | `candles` | ticker + minute_start | open, high, low, close |
-| `sessions` | id | opened_at, closed_at, summary JSON |
+| `sessions` | id | opened_at, closed_at, summary JSON, stream_no (integer, P1) |
+| `grants` (P1) | id | at, user_id, amount (integer coins actually applied), source (chat, dashboard), request_id (unique) |
 | `engine_state` | singleton | version, saved_at, last_tick_at, bounded runtime state JSON |
 
 **Persistence**
 
 - Each applied event or tick commits durable rows and the versioned engine-state checkpoint in the same transaction. A periodic 30 s checkpoint may compact state but must not be the only record of accepted Trades or rule state.
-- The checkpoint includes Heat, impact and their timestamps; pending IPO distinct Chatters/Uses; rolling repeat-use timestamps; last tick; per-Trader trade cooldown and stipend participation; active Raid Visa window; halt deadlines and last-Halt times; session references and Moon/Crash flags; and bounded Price history. Public SSE payloads are projected separately and never expose this internal record or raw message text.
+- The checkpoint includes Heat, impact and their timestamps; pending IPO distinct Chatters/Uses; rolling repeat-use timestamps; last tick; per-Trader trade cooldown and stipend participation; active Raid Visa window; halt deadlines and last-Halt times; session references, the current Stream number and Moon/Crash flags; and bounded Price history. Public SSE payloads are projected separately and never expose this internal record or raw message text.
 - At the same recovery timestamp, restore-from-rows reproduces all durable business state and rule state exactly. Overlay animations, queue playback and socket state are ephemeral and are not replayed on restart.
 - Before accepting new events, expire elapsed cooldowns and windows against injected recovery time. For downtime under 10 minutes, decay Heat/impact analytically over the gap, keep base/last Price until the first normal tick, and omit invented Uses, Stipends, candles and market-moment effects for the gap. For downtime of 10 minutes or longer, clear Heat, impact, pending IPO and repeat-use history; retain base/last Prices, Portfolios and session flags. Retain unexpired absolute Halt deadlines in both cases. A backwards recovery timestamp is a validation error rather than a negative elapsed time.
 - Bound time-dependent state: repeat-use history retains 30 s; pending IPO Uses retain 10 minutes and are pruned on every event/tick; trade/reply cooldown maps expire after their windows; stipend participation retains only the current minute; chart/Halt Price history retains 10 minutes plus one boundary sample. P0 candles retain at most 11 minute buckets per Listing (P1 1,441). Pending IPO keys are restricted to recognized catalog Emotes and removed when expired or listed.
@@ -313,6 +347,7 @@ The tables, in addition to twitch-kit's shared tables.
 | Message deleted by a mod | Its heat stays (already counted). Not worth reversing |
 | Banned user | Portfolio kept. Mods can freeze |
 | Restart while halted | `halted_until` is persisted and honored |
+| Stream drops and restarts, or the app restarts, within 2 h | Same Stream: one Greeting claim, Streak unchanged (5.11) |
 | Emote removed from the channel's 7TV set | Listing stays tradable until delisted. Image falls back to the cached URL |
 | Integer overflow | qty capped at 1,000,000 and total Coins at 1,000,000,000 per Trader. Credits saturate at the cap; a saturated credit never becomes fractional or wraps. Record the applied amount, including zero. Validate safe integers before arithmetic. |
 
@@ -330,17 +365,21 @@ Each line is a test (automated where marked "auto") or a scripted manual check i
 8. **auto** Stipend: a trader chatting in 3 separate minutes gets +30. Commands don't count.
 9. **auto** Follow bonus and raid visa amounts and windows.
 10. **auto** Foreign, self-sent and command messages never add heat.
-11. **auto** Restart: run a scenario and rebuild at the same timestamp; Portfolios, Listings, Prices, candles and rule state are equal. Recover across a short and a long gap; verify cooldown expiry, no duplicate Stipend, no repeated Moon/Crash and the stale-Heat policy in section 10.
+11. **auto** Restart: run a scenario and rebuild at the same timestamp; Portfolios, Listings, Prices, candles and rule state are equal. Recover across a short and a long gap; verify cooldown expiry, no duplicate Stipend, no repeated Moon/Crash and the stale-Heat policy in section 10. When greetings ship, a live Streak and the current Stream number also survive the rebuild.
 12. **auto** Reply budget: 100 `!portfolio` commands from 100 users within 10 s produce at most 18 chat sends per rolling 30 s through the queue. P0 requires correct reply handling; if P1 cards ship, their queue respects the 20-card bound and overflow policy.
 13. **auto** Soak: after warm-up, simulate 30 minutes at 24 Listings, 500 Traders and 50 msg/s. Assert the retention/queue bounds in section 10, stable fixed-cohort cardinality and valid Coins. Report tick p95 and peak heap; target p95 below 5 ms on the documented reference machine. Raw heap may grow while candles fill their retention window; it is not a zero-growth assertion or a machine-independent CI threshold.
 14. **manual** Live on Twitch: 2 test accounts trade, a real follow gives its bonus, the closing bell posts the summary in chat.
 15. **manual** OBS: 60 fps, every widget readable on a phone-sized stream preview, the SIM badge shows only while simulating.
+16. **auto** (P1) Greetings: a first `!greetings good morning` pays 50 and sets Streak 1; a second claim in the same Stream pays nothing and gets one reply; the next Stream pays 60 and sets Streak 2; skipping a whole Stream restarts at 1 and hides the old Streak; an opening Bell less than 2 h after a closing Bell continues the Stream (no second claim, Streak unchanged) while the demo Open bell always starts a new one; a bare `!greetings`, a frozen Trader and a closed market each leave Coins unchanged; the greeting words never appear in any persist, broadcast or say effect; credits saturate at the Coin cap.
+17. **auto** (P1) Grants: `!grant @ann 500` from the broadcaster credits exactly 500, writes one `grants` row and emits one Feed item and one reply; from a Mod or a viewer it changes nothing; zero, negative, fractional, non-numeric and above-`GRANT_MAX` amounts and unknown targets change nothing; a repeated `request_id` credits once; a saturated credit records the applied amount; a grant to a `sim_` Trader never reaches Twitch; the dashboard route rejects a request without the Origin and `X-CTA` guard.
 
 ## 14. Priorities
 
 - **P0 (must ship):** the behavior-fixture feasibility gate, market rules, essential dashboard controls, guarded actions, persistence/recovery, simulator, Tape/Chart/Board/Feed/Banners/SIM overlay, and all P0 parts of acceptance tests 1-15. Each live/OBS check records actual evidence; credentials and OBS availability are external verification prerequisites.
 - **P1:**
   - portfolio cards
+  - greetings and streaks (5.11)
+  - grants, by chat command and from the dashboard (5.12)
   - candles beyond what the chart needs
   - full settings UI (a P0 subset is fine)
   - CSV export
