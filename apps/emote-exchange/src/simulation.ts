@@ -24,22 +24,27 @@ export const exchangeScenarios: SimScenario[] = [
   {
     id: "pump-and-dump",
     label: "Pump and dump",
-    description: "15 chatters focus on one emote for 60 seconds, then send sell commands.",
+    description:
+      "15 chatters list four emotes, buy early, pump for 60 seconds, then rotate attention and sell.",
     defaults: { rate: 6, chatters: 15, mix: { plain: 10, emote: 90, follow: 0, raid: 0 } },
-    durationMs: 120_000,
+    durationMs: 360_000,
+    initial: [{ type: "online" }],
     message: ({ index, elapsedMs, chatters, emotes }) => ({
       type: "chat",
       chatter: index % chatters,
       text:
-        index < chatters
-          ? "!visa"
-          : index < chatters * 2
+        index < 2
+          ? emotes
+              .slice(0, 4)
+              .map((emote) => emote.name)
+              .join(" ")
+          : index < chatters + 2
             ? `!buy ${emoteAt(emotes, 0)} 1`
             : elapsedMs <= 60_000
               ? emoteAt(emotes, 0)
-              : index % 3 === 0
-                ? `!sell ${emoteAt(emotes, 0)} 1`
-                : "A quieter lap after that rush.",
+              : index < 390
+                ? `!sell ${emoteAt(emotes, 0)} all`
+                : emoteAt(emotes, 1 + (index % 3)),
     }),
   },
   {
@@ -48,7 +53,14 @@ export const exchangeScenarios: SimScenario[] = [
     description: "One chatter repeats one emote; three others use another once at the start.",
     defaults: { rate: 1, chatters: 4, mix: { plain: 0, emote: 100, follow: 0, raid: 0 } },
     durationMs: 30_000,
-    initial: [1, 2, 3].map((chatter) => ({ type: "chat" as const, chatter, text: "DemoBolt" })),
+    initial: [
+      ...[0, 1].map((chatter) => ({
+        type: "chat" as const,
+        chatter,
+        text: "DemoBear DemoBolt DemoBot DemoBull",
+      })),
+      ...[1, 2, 3].map((chatter) => ({ type: "chat" as const, chatter, text: "DemoBolt" })),
+    ],
     message: ({ emotes }) => ({ type: "chat", chatter: 0, text: emoteAt(emotes, 0) }),
   },
   {

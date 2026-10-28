@@ -1,0 +1,11 @@
+# E6 scenarios, soak and pacing — October 29, 2026
+
+All six scenarios are registered and now have engine-backed story checks. Pump and dump previously sent buys before any IPO, so none filled. It now uses two balanced messages to list four emotes, fifteen early buys, sixty seconds of concentrated attention, sell commands, then attention on the other three Listings over a six-minute run. The test requires real Trades, a Moon or Halt, and a final Price at least 40% below the peak. Solo spammer now establishes four Listings before its comparison; the group wins while the lone spammer remains below 125. Fixed B1–B5 fixtures and every engine default are unchanged.
+
+Tests: Pump and dump; Opening day (six Listings and accepted Trades); Raid wave (40 viewers and exactly twenty Visa credits); Quiet market (five-minute close) and Solo spammer; forty-minute Soak (ten-minute warm-up, thirty-minute observation). Soak asserts 500 Traders at warm-up and finish, 24 Listings, integer bounded Coins, Feed <=5, delivery cache <=2000, bounded pending/participation/repeat histories, <=11 candles and <=601 Price samples per Listing. Existing chat-out and overlay tests separately enforce delivery/animation queue bounds and SIM safety.
+
+Reference: Windows x64, Intel Core i5-13420H, Node v24.22.1. First full run: tick p95 4.257 ms, sampled peak heap 120.0 MiB (one heap observation per simulated minute). This measures the pure engine plus its effects, not SQLite, browser frame rate or a universal CI limit. The full soak test took about 139 seconds wall time. Other desktop work was active. No constants were tuned because the fixed fixtures and readable scenario progression pass with existing defaults.
+
+Visual verification: Opening day inspected in E5 at 1920x1080 and 960x540. Ran the repaired Pump and dump in real time in an isolated keyless app on port 4101, with the real overlay open. At full size inspected chart, HALT state on the Tape, Board names/worth, and the falling Price line; at half size inspected readable Price/percentage, Board separation, SIM and unclipped Tape. No overlay layout changes were required. Real OBS and live walkthrough remain separate external gates.
+
+Required repository checks: types, lint, tests and build pass; the full suite includes the soak, fixed B1–B5 tests and simulated-output safety checks. No dependency added.
