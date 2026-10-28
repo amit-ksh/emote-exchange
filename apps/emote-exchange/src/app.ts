@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import {
   createChatOut,
   createEmoteCatalog,
@@ -5,11 +6,13 @@ import {
   createHelix,
   createHttpApp,
   createOverlayBus,
+  createSimulator,
   createTwitchAuth,
   loadDemoCatalog,
   openStore,
 } from "@emote-exchange/twitch-kit";
 import type { FoundationDisplay } from "./public-state.ts";
+import { exchangeScenarios, simulationNotices } from "./simulation.ts";
 
 interface ExchangeRuntimeOptions {
   port?: number;
@@ -34,7 +37,7 @@ export function createExchangeRuntime({
 }: ExchangeRuntimeOptions = {}) {
   const store = openStore({ filename });
   try {
-    const settings = store.settings({ connectionChecks: 0, quietMode: false });
+    const settings = store.settings({ connectionChecks: 0, quietMode: false, simulationRuns: 0 });
     let publishState = () => {};
     let syncAuth = () => {};
     const auth = createTwitchAuth({
@@ -49,12 +52,13 @@ export function createExchangeRuntime({
       },
     });
     const helix = createHelix({ auth, clientId, now });
+    const demoEmotes = loadDemoCatalog(new URL("../client/public/demo-emotes/", import.meta.url));
     const catalog = createEmoteCatalog({
       store,
       auth,
       helix,
       now,
-      demo: loadDemoCatalog(new URL("../client/public/demo-emotes/", import.meta.url)),
+      demo: demoEmotes,
       onChange: () => publishState(),
     });
     const chatOut = createChatOut({
@@ -62,6 +66,18 @@ export function createExchangeRuntime({
       helix,
       now,
       quiet: settings.get("quietMode"),
+      onChange: () => publishState(),
+    });
+    const receiveEvent = (event: Parameters<typeof simulationNotices>[0]) => {
+      for (const say of simulationNotices(event)) chatOut.enqueue(say);
+    };
+    const simulator = createSimulator({
+      emotes: demoEmotes,
+      scenarios: exchangeScenarios,
+      now,
+      initialRun: settings.get("simulationRuns"),
+      onRun: (run) => settings.set("simulationRuns", run),
+      onEvent: receiveEvent,
       onChange: () => publishState(),
     });
     const eventsub = createEventSub({
@@ -74,6 +90,7 @@ export function createExchangeRuntime({
       onChange: () => publishState(),
       wasSent: (messageId) => chatOut.wasSent(messageId),
       lookupEmote: (word) => catalog.lookup(word),
+      onEvent: receiveEvent,
     });
     syncAuth = () => {
       chatOut.syncAuth();
@@ -91,6 +108,7 @@ export function createExchangeRuntime({
       eventsub: eventsub.publicState(),
       chatOut: chatOut.publicState(),
       catalog: catalog.publicState(),
+      simulator: simulator.publicState(),
     };
     if (!Number.isSafeInteger(projection.connectionChecks) || projection.connectionChecks < 0) {
       throw new Error("Stored local connection check count is invalid.");
@@ -106,6 +124,9 @@ export function createExchangeRuntime({
     });
     const app = createHttpApp({ port, bus });
     auth.mount(app);
+    app.get("/setup-guide", (context) =>
+      context.text(readFileSync(new URL("../../../docs/setup-guide.md", import.meta.url), "utf8")),
+    );
     const display = (): FoundationDisplay => ({
       ...projection,
       mode: auth.publicState().broadcaster.connected ? "live" : "demo",
@@ -114,11 +135,58 @@ export function createExchangeRuntime({
       eventsub: eventsub.publicState(),
       chatOut: chatOut.publicState(),
       catalog: catalog.publicState(),
+      simulatorRunning: simulator.publicState().running,
+      simulator: simulator.publicState(),
     });
     publishState = () =>
       bus.publish({
         ...display(),
       });
+    app.post("/api/sim/start", async (context) => {
+      if (simulator.publicState().running)
+        return context.json({ error: "Stop the current simulation before starting another." }, 409);
+      const body: unknown = await context.req.json().catch(() => null);
+      if (simulator.publicState().running)
+        return context.json({ error: "Stop the current simulation before starting another." }, 409);
+      try {
+        simulator.start(body);
+      } catch {
+        return context.json(
+          { error: "Use a valid scenario, seed, rate, chatter count and persona weights." },
+          400,
+        );
+      }
+      return context.json({ ok: true });
+    });
+    app.post("/api/sim/stop", (context) => {
+      simulator.stop();
+      return context.json({ ok: true });
+    });
+    app.post("/api/sim/event", async (context) => {
+      if (!simulator.publicState().running)
+        return context.json({ error: "Start the simulator before injecting an event." }, 409);
+      const body: unknown = await context.req.json().catch(() => null);
+      if (
+        !body ||
+        typeof body !== "object" ||
+        !("type" in body) ||
+        !["follow", "raid", "online", "offline"].includes(body.type as string)
+      )
+        return context.json({ error: "Choose a supported simulated event." }, 400);
+      const type = body.type as "follow" | "raid" | "online" | "offline";
+      if (type === "raid") {
+        const viewers = "viewers" in body ? body.viewers : 40;
+        if (
+          !Number.isSafeInteger(viewers) ||
+          (viewers as number) < 1 ||
+          (viewers as number) > 10_000
+        )
+          return context.json({ error: "Raid viewers must be between 1 and 10000." }, 400);
+        simulator.inject({ type, chatter: 0, viewers: viewers as number });
+      } else if (type === "follow") simulator.inject({ type, chatter: 0 });
+      else simulator.inject({ type });
+      return context.json({ ok: true });
+    });
     app.post("/api/emotes/refresh", (context) => {
       void catalog.refresh();
       return context.json({ ok: true }, 202);
@@ -178,6 +246,7 @@ export function createExchangeRuntime({
       close() {
         if (closed) return;
         closed = true;
+        simulator.close();
         catalog.close();
         chatOut.close();
         eventsub.close();

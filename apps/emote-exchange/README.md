@@ -1,6 +1,6 @@
 # Emote Exchange
 
-A local play-money emote market for Twitch, displayed through an OBS browser source. K1–K5 are implemented: SQLite storage, guarded actions, bounded SSE, Twitch sign-in, incoming events, queued chat sending and cached emote catalogs. The Simulator and market rules remain in [the implementation plan](../../docs/implementation-plan.md).
+A local play-money emote market for Twitch, displayed through an OBS browser source. K1–K6 are implemented: SQLite storage, guarded actions, bounded SSE, Twitch sign-in, incoming events, queued chat sending, cached emote catalogs and the seeded simulator. The final setup checklist and market rules remain in [the implementation plan](../../docs/implementation-plan.md).
 
 ## Run the foundation
 
@@ -11,7 +11,7 @@ pnpm install
 pnpm dev:exchange
 ```
 
-Open [the dashboard](http://localhost:4100/) and [the overlay](http://127.0.0.1:4100/overlay). No credentials or `.env` are required. Demo mode currently identifies the no-credentials foundation; simulated market scenarios arrive in later sprints.
+Open [the dashboard](http://localhost:4100/) and [the overlay](http://127.0.0.1:4100/overlay). No credentials or `.env` are required. Click **Start demo** to generate simulated chat and channel events immediately. Market prices and trade outcomes arrive in Sprint 2.
 
 For the built client:
 
@@ -26,13 +26,13 @@ Use **Test local connection** on the dashboard to verify a guarded action, a sav
 
 ## OBS
 
-Add a Browser Source at `http://127.0.0.1:4100/overlay`, width 1920, height 1080. The page background is transparent. Keep shutdown-when-hidden and refresh-on-activation off. The current overlay is a foundation label; market widgets arrive in E4.
+Add a Browser Source at `http://127.0.0.1:4100/overlay`, width 1920, height 1080. The page background is transparent. Keep shutdown-when-hidden and refresh-on-activation off. The current overlay is a foundation label with a SIM badge while simulation runs; market widgets arrive in E4.
 
 ## Twitch sign-in
 
 Follow [the setup guide](../../docs/setup-guide.md) to register one confidential Twitch app. Copy `.env.example` to `.env` and keep secrets local. Restart, click **Connect Twitch** under Broadcaster, then sign in and approve the permissions. Connected accounts are validated and restored after restart. **Connect bot** is optional; each account has a Disconnect button.
 
-After broadcaster login, the incoming-events panel should show **EventSub connected** and five **enabled** subscriptions. Type in your channel’s Twitch chat and check that **Live events** and **Chat messages** increase. The browser receives counts and fixed connection status; incoming chat text stays server-side. Counters reset on app restart. The header and overlay show **Twitch connected** when authorized; without credentials they show **Demo mode**. Market widgets and simulated scenarios are still pending.
+After broadcaster login, the incoming-events panel should show **EventSub connected** and five **enabled** subscriptions. Type in your channel’s Twitch chat and check that **Live events** and **Chat messages** increase. The browser receives counts and fixed connection status; incoming chat text stays server-side. Counters reset on app restart. The header and overlay show **Twitch connected** when authorized; without credentials they show **Demo mode**. The simulator works in either mode; market widgets are still pending.
 
 EventSub recovers from lost connections with backoff and recreates subscriptions. Twitch reconnect handoffs retain subscriptions without creating duplicates. Missed events during a lost connection cannot be replayed. For a local Twitch CLI mock, override both `EVENTSUB_WS_URL` and `EVENTSUB_SUBSCRIPTIONS_URL` as shown in [K3](../../docs/sprints/sprint-1-twitch-kit.md). Overrides accept only the official Twitch endpoints or explicit HTTP/WS loopback mock destinations.
 
@@ -50,9 +50,21 @@ The queue sends at most once per second and 18 times in any rolling 30 seconds, 
 
 Provider requests run in the background at startup and every 30 minutes. **Refresh emotes** requests an immediate update, useful after changing a channel set. **Cached** means a request failed and the last good set is still usable. **No channel set** covers an unconfigured provider or a 7TV profile without an active set. An empty configured set correctly shows zero. Channel caches are scoped to the connected broadcaster and are cleared when switching to another broadcaster; global caches remain reusable.
 
-All 24 original SVG demo emotes load from `client/public/demo-emotes/` before any request. Names match the filename without `.svg`, for example `DemoBull` and `DemoMoon`. With no keys and no network, these assets remain sufficient for upcoming simulator scenarios; optional public globals cannot delay startup. The simulator itself arrives in K6.
+All 24 original SVG demo emotes load from `client/public/demo-emotes/` before any request. Names match the filename without `.svg`, for example `DemoBull` and `DemoMoon`. With no keys and no network, these assets support every simulator preset; optional public globals cannot delay startup.
 
 To use your own 7TV emotes, sign in to 7TV with the connected Twitch account, add emotes to a set assigned to that channel, then refresh our catalog. Uploading new artwork is separate from adding existing emotes to a channel set. The live K5 check observed the channel emote `BOB` after this setup.
+
+## Simulator and demo mode
+
+In **Give it a dry run**, choose a scenario, seed, message rate (0.2–50 per second), chatter count (1–500) and persona weights, then click **Start demo** or **Start simulator**. The simulated counter climbs independently of the live EventSub counter. **Stop simulator** stops generation. Stop before changing settings. Persona weights are relative; scripted presets reserve some message slots for their own commands and emote patterns. Follow and raid generators add channel events alongside the configured chat-message rate.
+
+While running, use **Fake follow**, **Fake raid**, **Open bell** and **Close bell** to inject simulated events. Raid viewers must be 1–10,000. Their diagnostic previews appear under **Would have said**, including while live Twitch auth is connected. Simulation never uses the live chat sender. The dashboard and OBS overlay display **SIM** while the generator runs, and the badge clears after Stop.
+
+Free play plus Opening day, Pump and dump, Solo spammer, Raid wave, Quiet market and Soak are available. These generate normalized input events; price movements, IPOs, balances and fills await the market engine. The Solo spammer profile includes three initial B uses before its steady message schedule. Soak uses a fixed 500-chatter/24-emote pool for 40 virtual minutes, including the future 10-minute market warm-up.
+
+For repeatable tests, use the same seed, settings, logical start time and run ordinal. Events use scheduled timestamps rather than timer arrival times. Persisted run ordinals prevent event-ID collisions across separate starts or app restarts. Settings, counters and simulator state remain server-side; the browser receives summaries rather than chat messages. Runs stay stopped after app restart.
+
+Without `.env`, the banner reads **Demo mode: simulated chat only**. The linked setup guide is served locally at `/setup-guide`; no internet is needed to read it or run the bundled demo.
 
 ## Checks and troubleshooting
 

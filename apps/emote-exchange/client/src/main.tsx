@@ -4,6 +4,7 @@ import type { FoundationSnapshot } from "../../src/public-state.ts";
 import { ChatOutPanel, readChatOut } from "./chat-out.tsx";
 import { EmoteCatalogPanel, readCatalog } from "./emotes.tsx";
 import { EventSubPanel, readEventSub } from "./eventsub.tsx";
+import { readSimulator, SimulatorPanel } from "./simulator.tsx";
 import "./styles.css";
 
 type ConnectionStatus = "connecting" | "connected" | "reconnecting";
@@ -41,6 +42,7 @@ function readSnapshot(value: unknown): FoundationSnapshot | null {
   const eventsub = readEventSub(candidate.eventsub);
   const chatOut = readChatOut(candidate.chatOut);
   const catalog = readCatalog(candidate.catalog);
+  const simulator = readSimulator(candidate.simulator);
   if (
     candidate.v !== 1 ||
     !Number.isSafeInteger(candidate.seq) ||
@@ -48,7 +50,7 @@ function readSnapshot(value: unknown): FoundationSnapshot | null {
     candidate.app !== "Emote Exchange" ||
     !["demo", "live"].includes(candidate.mode as string) ||
     candidate.phase !== "foundation" ||
-    candidate.simulatorRunning !== false ||
+    typeof candidate.simulatorRunning !== "boolean" ||
     typeof candidate.overlayUrl !== "string" ||
     !Number.isSafeInteger(candidate.connectionChecks) ||
     (candidate.connectionChecks as number) < 0 ||
@@ -56,7 +58,9 @@ function readSnapshot(value: unknown): FoundationSnapshot | null {
     !auth ||
     !eventsub ||
     !chatOut ||
-    !catalog
+    !catalog ||
+    !simulator ||
+    simulator.running !== candidate.simulatorRunning
   ) {
     return null;
   }
@@ -83,13 +87,14 @@ function readSnapshot(value: unknown): FoundationSnapshot | null {
     app: "Emote Exchange",
     mode: candidate.mode as FoundationSnapshot["mode"],
     phase: "foundation",
-    simulatorRunning: false,
+    simulatorRunning: candidate.simulatorRunning,
     overlayUrl: candidate.overlayUrl,
     connectionChecks: candidate.connectionChecks as number,
     auth,
     eventsub,
     chatOut,
     catalog,
+    simulator,
     moments: candidate.moments.filter(
       (moment): moment is FoundationSnapshot["moments"][number] =>
         typeof moment === "object" &&
@@ -239,7 +244,7 @@ function TwitchConnection({ auth }: { auth: FoundationSnapshot["auth"] | undefin
         ))
       )}
       <p className="copy-feedback">
-        Incoming Twitch events stay on this machine. The simulator and market are still planned.
+        Incoming Twitch events stay on this machine. The simulator is ready; market rules are next.
       </p>
     </section>
   );
@@ -299,10 +304,19 @@ function Dashboard() {
           <span className="mode-tag">
             {snapshot?.mode === "live" ? "Twitch connected" : "Demo mode"}
           </span>
+          {snapshot?.simulatorRunning && <span className="sim-badge">SIM</span>}
         </div>
       </header>
 
       <main id="main">
+        {snapshot?.mode === "demo" && (
+          <aside className="demo-banner">
+            <strong>Demo mode: simulated chat only</strong>
+            <a href="/setup-guide" target="_blank" rel="noreferrer">
+              Twitch setup guide ↗
+            </a>
+          </aside>
+        )}
         <section className="intro" aria-labelledby="intro-title">
           <div className="intro-copy">
             <p className="eyebrow">CHAT DRIVES THE MARKET.</p>
@@ -324,8 +338,8 @@ function Dashboard() {
               {snapshot ? "Local foundation ready." : "Checking the local server."}
             </h2>
             <p>
-              Twitch sign-in, incoming events, and the transparent overlay are ready. The simulator
-              and trading come next.
+              Twitch sign-in, incoming events, the simulator, and the transparent overlay are ready.
+              Market rules and trading come next.
             </p>
             <div className="connection-status" role="status">
               <span>{connectionLabel}</span>
@@ -358,6 +372,7 @@ function Dashboard() {
           </aside>
         </section>
 
+        <SimulatorPanel simulator={snapshot?.simulator} demo={snapshot?.mode !== "live"} />
         <TwitchConnection auth={snapshot?.auth} />
         <EventSubPanel connection={snapshot?.eventsub} />
         <EmoteCatalogPanel catalog={snapshot?.catalog} />
@@ -440,7 +455,7 @@ function Dashboard() {
                 <h3>Connect the channel</h3>
                 <p>Twitch login, chat events, and your emote catalog.</p>
               </div>
-              <span className="planned-label">In progress</span>
+              <span className="planned-label">Ready</span>
             </li>
             <li>
               <span className="step-index" aria-hidden="true">
@@ -448,9 +463,9 @@ function Dashboard() {
               </span>
               <div>
                 <h3>Give it a dry run</h3>
-                <p>A seeded simulator, with no Twitch account required.</p>
+                <p>Simulated chat and channel events, with no Twitch account required.</p>
               </div>
-              <span className="planned-label">Planned</span>
+              <span className="planned-label">Ready</span>
             </li>
             <li>
               <span className="step-index" aria-hidden="true">
@@ -487,6 +502,11 @@ function Overlay() {
   return (
     <main className="overlay-viewport" aria-label="Emote Exchange OBS overlay">
       <div className="overlay-canvas" style={{ transform: `scale(${scale})` }}>
+        {snapshot?.simulatorRunning && (
+          <aside className="overlay-sim-badge" aria-label="Simulation running">
+            SIM
+          </aside>
+        )}
         <section className="foundation-label" aria-label="Emote Exchange, market coming next">
           <span className="overlay-brand-mark" aria-hidden="true">
             EX

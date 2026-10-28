@@ -19,6 +19,9 @@ export type { EventSubPublicState } from "./eventsub/runner.ts";
 export { createEventSub, eventSubEndpoints } from "./eventsub/runner.ts";
 export { createHelix } from "./helix.ts";
 export { startHttpServer } from "./server.ts";
+export type { SimAction, SimConfig, SimScenario } from "./sim/engine.ts";
+export type { SimulatorPublicState } from "./sim/runtime.ts";
+export { createSimulator } from "./sim/runtime.ts";
 export { openStore } from "./store/index.ts";
 
 export interface HttpAppOptions<Display extends object> {

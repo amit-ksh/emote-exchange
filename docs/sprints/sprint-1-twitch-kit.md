@@ -82,7 +82,7 @@ Done when tests pass and a "Send test message" button on the ChatOutPanel posts 
 
 ## K5 Emote catalog
 
-**Complete — October 28, 2026.** All four providers, persisted fallback, case-sensitive precedence, normalizer lookup and 24 original bundled demo emotes are implemented. The streamer added `BOB` to the channel's 7TV set; refresh returned one ready channel emote and the dashboard exposed it alongside global provider counts. Offline startup and full/half overlay browser checks passed. See [K5 verification](../verification/k5-emotes.md). K6–K7 remain pending.
+**Complete — October 28, 2026.** All four providers, persisted fallback, case-sensitive precedence, normalizer lookup and 24 original bundled demo emotes are implemented. The streamer added `BOB` to the channel's 7TV set; refresh returned one ready channel emote and the dashboard exposed it alongside global provider counts. Offline startup and full/half overlay browser checks passed. See [K5 verification](../verification/k5-emotes.md).
 
 ```text
 Read docs/specs/twitch-kit.md section 9 (Emote catalog) and docs/resources.md (third-party emote providers). Task K5.
@@ -94,6 +94,8 @@ Done when tests pass and the dashboard lists the emote counts per provider for m
 ```
 
 ## K6 Simulator and demo mode
+
+**Complete — October 28, 2026.** Seeded event generation, seven presets, guarded controls, independent counters and SIM badges work in demo and live-connected operation. A temporary app copy without `.env` and with fetch blocked passed the Start demo walkthrough. Mixed-source follow/raid/bell output produced only local previews and zero Twitch sends. The virtual Soak input test emitted 120,000 messages with fixed participants; market outcomes remain Sprint 2 work. See [K6 verification](../verification/k6-simulator.md). K7 remains pending.
 
 ```text
 Read docs/specs/twitch-kit.md sections 16 (Simulator) and 18 (Demo mode), and ADR 0008. Task K6.

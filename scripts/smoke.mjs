@@ -66,7 +66,10 @@ try {
 
   const response = await fetch(`${origin}/api/snapshot`);
   assert.equal(response.headers.get("cache-control"), "no-store");
-  const { catalog, seq, ...snapshot } = await response.json();
+  const { catalog, seq, simulator, ...snapshot } = await response.json();
+  assert.equal(simulator.running, false);
+  assert.equal(simulator.scenarios.length, 7);
+  assert.ok((await (await fetch(`${origin}/setup-guide`)).text()).includes("Twitch"));
   assert.ok(Number.isSafeInteger(seq) && seq >= 0);
   assert.equal(catalog.ready, true);
   assert.equal(catalog.demoCount, 24);
@@ -157,8 +160,47 @@ try {
   } finally {
     controller.abort();
   }
+  const action = (path, body) =>
+    fetch(`${origin}/api/sim/${path}`, {
+      method: "POST",
+      headers: { Origin: origin, "X-CTA": "1", "Content-Type": "application/json" },
+      ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+    });
+  assert.equal(
+    (
+      await action("start", {
+        seed: 42,
+        scenario: "opening-day",
+        rate: 4,
+        chatters: 12,
+        mix: { plain: 65, emote: 30, follow: 4, raid: 1 },
+      })
+    ).status,
+    200,
+  );
+  const simDeadline = Date.now() + 5000;
+  let demo;
+  do {
+    demo = await (await fetch(`${origin}/api/snapshot`)).json();
+    if (demo.simulator.chatMessageCount >= 2) break;
+    await delay(100);
+  } while (Date.now() < simDeadline);
+  assert.ok(demo.simulator.chatMessageCount >= 2);
+  assert.equal(demo.simulatorRunning, true);
+  assert.equal(demo.mode, "demo");
+  for (const type of ["follow", "raid", "offline"])
+    assert.equal((await action("event", { type, viewers: 40 })).status, 200);
+  const preview = await (await fetch(`${origin}/api/snapshot`)).json();
+  assert.ok(preview.chatOut.logs.length >= 4);
+  assert.ok(
+    preview.chatOut.logs.every(
+      (entry) => entry.kind === "would-have-said" && entry.origin === "sim",
+    ),
+  );
+  assert.equal((await action("stop")).status, 200);
+  assert.equal((await (await fetch(`${origin}/api/snapshot`)).json()).simulatorRunning, false);
   console.log(
-    "Production smoke passed: dashboard, overlay, assets, persisted action, SSE deltas and guards.",
+    "Production smoke passed: dashboard, overlay, demo assets, simulator counters/previews, persisted action, SSE and guards.",
   );
 } finally {
   if (child.exitCode === null && child.signalCode === null) {

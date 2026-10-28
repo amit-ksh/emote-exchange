@@ -4,19 +4,21 @@ import type {
   ChatOutPublicState,
   EventSubPublicState,
   PublicMoment,
+  SimulatorPublicState,
 } from "@emote-exchange/twitch-kit";
 
 export interface FoundationDisplay {
   app: "Emote Exchange";
   mode: "demo" | "live";
   phase: "foundation";
-  simulatorRunning: false;
+  simulatorRunning: boolean;
   overlayUrl: string;
   connectionChecks: number;
   auth: AuthPublicState;
   eventsub: EventSubPublicState;
   chatOut: ChatOutPublicState;
   catalog: CatalogPublicState;
+  simulator: SimulatorPublicState;
 }
 
 export interface FoundationSnapshot extends FoundationDisplay {

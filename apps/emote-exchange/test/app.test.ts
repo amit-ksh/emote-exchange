@@ -45,7 +45,10 @@ test("Exchange exposes an honest foundation-only display snapshot", async (conte
     headers: { Host: "localhost:4100" },
   });
   assert.equal(response.status, 200);
-  const { catalog, ...snapshot } = await response.json();
+  const { catalog, simulator, ...snapshot } = await response.json();
+  assert.equal(simulator.running, false);
+  assert.equal(simulator.eventCount, 0);
+  assert.equal(simulator.scenarios.length, 7);
   assert.equal(catalog.ready, true);
   assert.equal(catalog.demoCount, 24);
   assert.equal(catalog.total, 24);
@@ -95,6 +98,76 @@ test("Exchange exposes an honest foundation-only display snapshot", async (conte
       bot: { connected: false, login: null, scopes: [], reconnect: false },
     },
   });
+});
+
+test("guarded simulator controls drive demo counters, previews and SIM state without raw chat", async (t) => {
+  t.mock.timers.enable({ apis: ["setInterval"] });
+  let now = 1000;
+  const runtime = createExchangeRuntime({ now: () => now });
+  t.after(() => runtime.close());
+  const headers = {
+    Host: "localhost:4100",
+    Origin: "http://localhost:4100",
+    "X-CTA": "1",
+    "Content-Type": "application/json",
+  };
+  const action = (path: string, body?: unknown) =>
+    runtime.app.request(`http://localhost:4100/api/sim/${path}`, {
+      method: "POST",
+      headers,
+      body: body === undefined ? undefined : JSON.stringify(body),
+    });
+  const snapshot = async () =>
+    (
+      await runtime.app.request("http://localhost:4100/api/snapshot", {
+        headers: { Host: "localhost:4100" },
+      })
+    ).json();
+  for (const path of ["start", "stop", "event"])
+    assert.equal(
+      (
+        await runtime.app.request(`http://localhost:4100/api/sim/${path}`, {
+          method: "POST",
+          headers: { Host: "localhost:4100" },
+        })
+      ).status,
+      403,
+    );
+  assert.equal((await action("start", { seed: 42, rate: 0, scenario: "opening-day" })).status, 400);
+  const config = {
+    seed: 42,
+    rate: 4,
+    chatters: 12,
+    scenario: "opening-day",
+    mix: { plain: 70, emote: 25, follow: 4, raid: 1 },
+  };
+  assert.equal((await action("start", config)).status, 200);
+  assert.equal((await action("start", config)).status, 409);
+  now = 3000;
+  t.mock.timers.tick(2000);
+  assert.equal((await action("event", { type: "raid", viewers: -1 })).status, 400);
+  for (const type of ["follow", "raid", "online", "offline"])
+    assert.equal((await action("event", { type, viewers: 40 })).status, 200);
+  const running = await snapshot();
+  assert.equal(running.mode, "demo");
+  assert.equal(running.simulatorRunning, true);
+  assert.equal(running.simulator.chatMessageCount, 8);
+  assert.ok(running.simulator.eventCount >= 14);
+  assert.equal(running.eventsub.eventCount, 0);
+  assert.ok(
+    running.chatOut.logs.every(
+      (entry: { kind: string; origin: string }) =>
+        entry.kind === "would-have-said" && entry.origin === "sim",
+    ),
+  );
+  assert.equal(JSON.stringify(running).includes('"chatter"'), false);
+  assert.equal((await action("stop")).status, 200);
+  const stopped = await snapshot();
+  assert.equal(stopped.simulatorRunning, false);
+  now = 10_000;
+  t.mock.timers.tick(7000);
+  assert.equal((await snapshot()).simulator.eventCount, stopped.simulator.eventCount);
+  assert.equal((await action("event", { type: "follow" })).status, 409);
 });
 
 test("chat actions are guarded, demo preview stays local, and quiet mode persists", async (t) => {
