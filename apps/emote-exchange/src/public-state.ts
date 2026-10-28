@@ -1,4 +1,4 @@
-import type { PublicMoment } from "@emote-exchange/twitch-kit";
+import type { AuthPublicState, PublicMoment } from "@emote-exchange/twitch-kit";
 
 export interface FoundationDisplay {
   app: "Emote Exchange";
@@ -7,6 +7,7 @@ export interface FoundationDisplay {
   simulatorRunning: false;
   overlayUrl: string;
   connectionChecks: number;
+  auth: AuthPublicState;
 }
 
 export interface FoundationSnapshot extends FoundationDisplay {

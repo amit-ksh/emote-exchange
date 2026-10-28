@@ -348,6 +348,25 @@ p {
 .local-check {
   margin-top: 20px;
 }
+.auth-account {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 20px 0;
+  border-bottom: 1px solid var(--line);
+}
+.auth-account h3 {
+  font-size: 16px;
+}
+.auth-account p {
+  margin-top: 8px;
+  color: var(--muted);
+  font-size: 13px;
+}
+.overlay-setup + .overlay-setup {
+  margin-top: 24px;
+}
 .local-check p {
   margin-top: 10px;
   font-size: 12px;

@@ -5,9 +5,36 @@ import "./styles.css";
 
 type ConnectionStatus = "connecting" | "connected" | "reconnecting";
 
+function readAuth(value: unknown): FoundationSnapshot["auth"] | null {
+  if (!value || typeof value !== "object") return null;
+  const source = value as Record<string, unknown>;
+  if (typeof source.configured !== "boolean") return null;
+  const result = { configured: source.configured } as FoundationSnapshot["auth"];
+  for (const role of ["broadcaster", "bot"] as const) {
+    const account = source[role] as Record<string, unknown> | undefined;
+    if (
+      !account ||
+      typeof account.connected !== "boolean" ||
+      (account.login !== null && typeof account.login !== "string") ||
+      typeof account.reconnect !== "boolean" ||
+      !Array.isArray(account.scopes) ||
+      !account.scopes.every((scope) => typeof scope === "string")
+    )
+      return null;
+    result[role] = {
+      connected: account.connected,
+      login: account.login as string | null,
+      reconnect: account.reconnect,
+      scopes: account.scopes as string[],
+    };
+  }
+  return result;
+}
+
 function readSnapshot(value: unknown): FoundationSnapshot | null {
   if (typeof value !== "object" || value === null) return null;
   const candidate = value as Record<string, unknown>;
+  const auth = readAuth(candidate.auth);
   if (
     candidate.v !== 1 ||
     !Number.isSafeInteger(candidate.seq) ||
@@ -19,7 +46,8 @@ function readSnapshot(value: unknown): FoundationSnapshot | null {
     typeof candidate.overlayUrl !== "string" ||
     !Number.isSafeInteger(candidate.connectionChecks) ||
     (candidate.connectionChecks as number) < 0 ||
-    !Array.isArray(candidate.moments)
+    !Array.isArray(candidate.moments) ||
+    !auth
   ) {
     return null;
   }
@@ -49,6 +77,7 @@ function readSnapshot(value: unknown): FoundationSnapshot | null {
     simulatorRunning: false,
     overlayUrl: candidate.overlayUrl,
     connectionChecks: candidate.connectionChecks as number,
+    auth,
     moments: candidate.moments.filter(
       (moment): moment is FoundationSnapshot["moments"][number] =>
         typeof moment === "object" &&
@@ -122,6 +151,86 @@ function Wordmark() {
       </span>
       <span>Emote Exchange</span>
     </span>
+  );
+}
+
+function TwitchConnection({ auth }: { auth: FoundationSnapshot["auth"] | undefined }) {
+  const [busy, setBusy] = useState<string | null>(null);
+  const [error, setError] = useState(false);
+  const result = new URLSearchParams(window.location.search).get("auth");
+  async function disconnect(role: "broadcaster" | "bot") {
+    setBusy(role);
+    setError(false);
+    try {
+      const response = await fetch("/api/auth/disconnect", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-CTA": "1" },
+        body: JSON.stringify({ role }),
+      });
+      if (!response.ok) throw new Error("Disconnect failed");
+      window.history.replaceState(null, "", window.location.pathname);
+    } catch {
+      setError(true);
+    } finally {
+      setBusy(null);
+    }
+  }
+  return (
+    <section className="overlay-setup" aria-labelledby="twitch-title">
+      <div className="section-heading">
+        <div>
+          <p className="eyebrow">YOUR CHANNEL</p>
+          <h2 id="twitch-title">Connect Twitch.</h2>
+        </div>
+      </div>
+      <p className="copy-feedback" role="status">
+        {error
+          ? "Could not disconnect. Try again."
+          : result === "failed"
+            ? "Twitch connection failed. Start a new login attempt."
+            : result === "connected"
+              ? "Twitch account connected."
+              : "Authorize your channel to prepare for live chat integration."}
+      </p>
+      {!auth?.configured ? (
+        <p className="copy-feedback">
+          Add your Twitch app credentials to the local .env file, then restart the app.
+        </p>
+      ) : (
+        (["broadcaster", "bot"] as const).map((role) => (
+          <div className="auth-account" key={role}>
+            <div>
+              <h3>{role === "broadcaster" ? "Broadcaster" : "Bot · optional"}</h3>
+              <p>{auth[role].connected ? `Connected as @${auth[role].login}` : "Not connected"}</p>
+            </div>
+            {auth[role].connected ? (
+              <button
+                className="button button-secondary"
+                type="button"
+                disabled={busy !== null}
+                onClick={() => {
+                  void disconnect(role);
+                }}
+              >
+                {busy === role ? "Disconnecting…" : `Disconnect ${role}`}
+              </button>
+            ) : (
+              <a className="button button-primary" href={`/auth/login?role=${role}`}>
+                {auth[role].reconnect
+                  ? "Reconnect"
+                  : role === "broadcaster"
+                    ? "Connect Twitch"
+                    : "Connect bot"}
+              </a>
+            )}
+          </div>
+        ))
+      )}
+      <p className="copy-feedback">
+        Live chat reception arrives in the next milestone. The simulator and market are still
+        planned.
+      </p>
+    </section>
   );
 }
 
@@ -202,8 +311,8 @@ function Dashboard() {
               {snapshot ? "Local foundation ready." : "Checking the local server."}
             </h2>
             <p>
-              The dashboard and transparent overlay are in place. Twitch connection, the simulator,
-              and trading come next.
+              Twitch sign-in, the dashboard, and the transparent overlay are ready. Live chat, the
+              simulator, and trading come next.
             </p>
             <div className="connection-status" role="status">
               <span>{connectionLabel}</span>
@@ -236,6 +345,7 @@ function Dashboard() {
           </aside>
         </section>
 
+        <TwitchConnection auth={snapshot?.auth} />
         <section className="overlay-setup" aria-labelledby="overlay-title">
           <div className="section-heading">
             <div>

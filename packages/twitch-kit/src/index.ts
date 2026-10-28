@@ -3,6 +3,9 @@ import { bodyLimit } from "hono/body-limit";
 import type { OverlayBus } from "./bus.ts";
 import { isAllowedHost, isAllowedOrigin } from "./security.ts";
 
+export type { AuthPublicState, AuthRole } from "./auth.ts";
+export { createTwitchAuth } from "./auth.ts";
+
 export type { OverlayBus, PublicMoment } from "./bus.ts";
 export { createOverlayBus } from "./bus.ts";
 export { startHttpServer } from "./server.ts";

@@ -27,6 +27,8 @@ const child = spawn(process.execPath, ["src/server.ts"], {
     PUBLIC_ORIGIN: origin,
     DATA_DIR: dataDir,
     NODE_ENV: "production",
+    TWITCH_CLIENT_ID: "",
+    TWITCH_CLIENT_SECRET: "",
   },
   stdio: "ignore",
 });
@@ -74,6 +76,11 @@ try {
     overlayUrl: `${origin}/overlay`,
     connectionChecks: 0,
     moments: [],
+    auth: {
+      configured: false,
+      broadcaster: { connected: false, login: null, scopes: [], reconnect: false },
+      bot: { connected: false, login: null, scopes: [], reconnect: false },
+    },
   });
   // Fetch normalizes Host and paths; use raw HTTP for malformed-request checks.
   function rawStatus(path, host) {

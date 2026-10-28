@@ -12,10 +12,17 @@ try {
 }
 
 try {
-  const { port, dataDir } = readConfig(process.env);
-  const runtime = createExchangeRuntime({ port, filename: join(dataDir, "emote-exchange.sqlite") });
+  const { port, dataDir, publicOrigin } = readConfig(process.env);
+  const runtime = createExchangeRuntime({
+    port,
+    publicOrigin,
+    clientId: process.env.TWITCH_CLIENT_ID ?? "",
+    clientSecret: process.env.TWITCH_CLIENT_SECRET ?? "",
+    filename: join(dataDir, "emote-exchange.sqlite"),
+  });
   let running: Awaited<ReturnType<typeof startHttpServer>>;
   try {
+    await runtime.initialize();
     running = await startHttpServer({
       app: runtime.app,
       port,
@@ -29,8 +36,13 @@ try {
   }
   console.log(`Emote Exchange foundation · Demo mode · http://localhost:${port}`);
   console.log(`OBS overlay: http://127.0.0.1:${port}/overlay`);
+  const maintenance = setInterval(() => {
+    void runtime.maintenance().catch(() => {});
+  }, 60_000);
+  maintenance.unref();
   for (const signal of ["SIGINT", "SIGTERM"] as const) {
     process.once(signal, () => {
+      clearInterval(maintenance);
       void running.close().then(() => {
         runtime.close();
         process.exit(0);

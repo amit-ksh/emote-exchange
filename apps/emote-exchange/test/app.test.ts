@@ -5,6 +5,38 @@ import { join } from "node:path";
 import test from "node:test";
 import { createExchangeRuntime } from "../src/app.ts";
 
+test("Twitch configuration exposes only safe state and disconnect remains guarded", async (t) => {
+  const runtime = createExchangeRuntime({
+    clientId: "private-test-id",
+    clientSecret: "private-test-secret",
+  });
+  t.after(() => runtime.close());
+  const snapshot = await (
+    await runtime.app.request("http://localhost:4100/api/snapshot", {
+      headers: { Host: "localhost:4100" },
+    })
+  ).text();
+  assert.equal(JSON.parse(snapshot).auth.configured, true);
+  assert.equal(snapshot.includes("private-test"), false);
+  const denied = await runtime.app.request("http://localhost:4100/api/auth/disconnect", {
+    method: "POST",
+    headers: { Host: "localhost:4100" },
+    body: JSON.stringify({ role: "broadcaster" }),
+  });
+  assert.equal(denied.status, 403);
+  const accepted = await runtime.app.request("http://localhost:4100/api/auth/disconnect", {
+    method: "POST",
+    headers: {
+      Host: "localhost:4100",
+      Origin: "http://localhost:4100",
+      "X-CTA": "1",
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ role: "broadcaster" }),
+  });
+  assert.equal(accepted.status, 200);
+});
+
 test("Exchange exposes an honest foundation-only display snapshot", async (context) => {
   const runtime = createExchangeRuntime();
   context.after(() => runtime.close());
@@ -23,6 +55,11 @@ test("Exchange exposes an honest foundation-only display snapshot", async (conte
     overlayUrl: "http://127.0.0.1:4100/overlay",
     connectionChecks: 0,
     moments: [],
+    auth: {
+      configured: false,
+      broadcaster: { connected: false, login: null, scopes: [], reconnect: false },
+      bot: { connected: false, login: null, scopes: [], reconnect: false },
+    },
   });
 });
 

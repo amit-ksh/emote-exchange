@@ -25,6 +25,8 @@ Done when all tests pass and the Emote Exchange dashboard at 4100 can POST a dum
 
 ## K2 Auth (authorization code flow, two roles)
 
+**Implemented; live acceptance pending — October 28, 2026.** Automated OAuth/lifecycle checks and connection controls pass. Complete Twitch consent and verify restart persistence before marking K2 complete. See [K2 verification](../verification/k2-auth.md).
+
 ```text
 Read docs/specs/twitch-kit.md section 6 (Auth) and ADR 0004. Task K2.
 

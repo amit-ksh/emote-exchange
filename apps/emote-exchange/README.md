@@ -28,9 +28,9 @@ Use **Test local connection** on the dashboard to verify a guarded action, a sav
 
 Add a Browser Source at `http://127.0.0.1:4100/overlay`, width 1920, height 1080. The page background is transparent. Keep shutdown-when-hidden and refresh-on-activation off. The current overlay is a foundation label; market widgets arrive in E4.
 
-## Live Twitch setup, later
+## Twitch sign-in
 
-Follow [the setup guide](../../docs/setup-guide.md) to register one confidential Twitch app. Copy `.env.example` to `.env` and keep secrets local. The foundation stays in Demo mode even when credentials are supplied; login is not implemented until K2.
+Follow [the setup guide](../../docs/setup-guide.md) to register one confidential Twitch app. Copy `.env.example` to `.env` and keep secrets local. Restart, click **Connect Twitch** under Broadcaster, then sign in and approve the permissions. Connected accounts are validated and restored after restart. **Connect bot** is optional; each account has a Disconnect button. Live chat and the market remain later milestones, so Demo mode still labels the foundation.
 
 ## Checks and troubleshooting
 
