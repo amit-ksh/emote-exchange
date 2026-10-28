@@ -4,7 +4,9 @@ import type { FoundationSnapshot } from "../../src/public-state.ts";
 import { ChatOutPanel, readChatOut } from "./chat-out.tsx";
 import { EmoteCatalogPanel, readCatalog } from "./emotes.tsx";
 import { EventSubPanel, readEventSub } from "./eventsub.tsx";
+import { MarketPanel, MarketSettingsPanel, TradersPanel } from "./market.tsx";
 import { ExchangeOverlay } from "./overlay.tsx";
+import { readOverlayMarket } from "./overlay-model.ts";
 import { OverlayUrlPanel, SetupChecklist } from "./setup.tsx";
 import { readSimulator, SimulatorPanel } from "./simulator.tsx";
 import "./styles.css";
@@ -100,6 +102,7 @@ function readSnapshot(value: unknown): FoundationSnapshot | null {
     chatOut,
     catalog,
     simulator,
+    market: readOverlayMarket(candidate.market) ?? undefined,
     moments: candidate.moments.filter(
       (moment): moment is FoundationSnapshot["moments"][number] =>
         typeof moment === "object" &&
@@ -257,7 +260,17 @@ function ConnectionPanel({ auth }: { auth: FoundationSnapshot["auth"] | undefine
   );
 }
 
-const views = ["Overview", "Setup", "Demo", "Emotes", "Chat", "Diagnostics"] as const;
+const views = [
+  "Overview",
+  "Market",
+  "Traders",
+  "Settings",
+  "Setup",
+  "Demo",
+  "Emotes",
+  "Chat",
+  "Diagnostics",
+] as const;
 type View = (typeof views)[number];
 function Dashboard() {
   const { snapshot, status } = useFoundation("dashboard");
@@ -301,6 +314,9 @@ function Dashboard() {
   url.hostname = "127.0.0.1";
   const subtitles: Record<View, string> = {
     Overview: "Your channel, ready for the Exchange.",
+    Market: "Follow the attention. Manage your Listings.",
+    Traders: "The people building your Exchange.",
+    Settings: "Tune the market. Changes apply immediately.",
     Setup: "Connect your channel. Keep control on your machine.",
     Demo: "Try the Exchange with simulated chat.",
     Emotes: "The names behind your market.",
@@ -337,7 +353,7 @@ function Dashboard() {
               onClick={() => setView(name)}
             >
               <span className="nav-icon" aria-hidden="true">
-                {["◫", "◎", "▷", "✦", "≡", "⌁"][index]}
+                {["◫", "↗", "◉", "⚙", "◎", "▷", "✦", "≡", "⌁"][index]}
               </span>
               <span>{name}</span>
               {name === "Setup" && <small>{complete}/3</small>}
@@ -470,6 +486,9 @@ function Dashboard() {
           </>
         )}
         {view === "Setup" && <ConnectionPanel auth={snapshot?.auth} />}
+        {view === "Market" && <MarketPanel market={snapshot?.market} current={current} />}
+        {view === "Traders" && <TradersPanel market={snapshot?.market} current={current} />}
+        {view === "Settings" && <MarketSettingsPanel current={current} />}
         {view === "Demo" && (
           <SimulatorPanel simulator={snapshot?.simulator} demo={snapshot?.mode !== "live"} />
         )}

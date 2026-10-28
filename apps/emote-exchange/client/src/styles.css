@@ -220,6 +220,8 @@ dd {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  min-height: 0;
+  overflow-y: auto;
 }
 .nav-pill {
   border: 0;
@@ -1028,4 +1030,80 @@ dd {
 .url-control .button {
   white-space: nowrap;
   flex: none;
+}
+.market-panel {
+  background: var(--g);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 28px;
+  margin-bottom: 28px;
+  min-width: 0;
+}
+.table-scroll {
+  overflow-x: auto;
+}
+.market-table {
+  border-collapse: collapse;
+  width: 100%;
+  text-align: left;
+  white-space: nowrap;
+}
+.market-table th,
+.market-table td {
+  padding: 14px 12px;
+  border-bottom: 1px solid var(--line);
+}
+.market-table thead th {
+  color: var(--secondary);
+  font-size: 13px;
+  font-weight: 500;
+}
+.market-table tbody th {
+  font-weight: 500;
+}
+.listing-name,
+.action-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.listing-name img {
+  object-fit: contain;
+}
+.action-row {
+  flex-wrap: wrap;
+  margin-top: 16px;
+}
+.trader-search {
+  display: grid;
+  gap: 8px;
+  max-width: 360px;
+  margin: 20px 0;
+}
+.market-settings-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px;
+  margin: 24px 0;
+}
+.market-settings-grid label {
+  display: grid;
+  gap: 8px;
+}
+.market-settings-grid small {
+  color: var(--secondary);
+}
+.market-panel form > label {
+  display: grid;
+  gap: 8px;
+  margin: 20px 0;
+  max-width: 360px;
+}
+@media (max-width: 600px) {
+  .market-settings-grid {
+    grid-template-columns: 1fr;
+  }
+  .market-panel {
+    padding: 20px;
+  }
 }

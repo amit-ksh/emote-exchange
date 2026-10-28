@@ -61,6 +61,7 @@ export type MarketSay = Say & { type: "say"; userId?: string };
 export type MarketInput =
   | ChatEvent
   | { type: "Tick" }
+  | { type: "Settings"; settings: unknown }
   | { type: "Pause"; id: string; origin: ChatEvent["origin"]; value: boolean }
   | { type: "Freeze"; id: string; origin: ChatEvent["origin"]; userId: string; value: boolean }
   | { type: "Delist"; id: string; origin: ChatEvent["origin"]; ticker: string }
@@ -509,6 +510,10 @@ function applyMarket(
     throw new Error("Invalid or backwards market clock.");
   if (input.type === "Reset" && input.confirmation !== "RESET")
     throw new Error("Type RESET to confirm a Season reset.");
+  if (input.type === "Settings") {
+    const state = { ...previous, at: now, settings: marketSettings(input.settings) };
+    return { state, effects: [persist(state, [], []), broadcast(state, [])] };
+  }
   const relevant =
     input.type !== "Tick" &&
     [

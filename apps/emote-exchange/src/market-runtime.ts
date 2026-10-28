@@ -85,6 +85,7 @@ export function createMarketRuntime(options: Options) {
     receive,
     tick: () => receive({ type: "Tick" }),
     display: () => marketProjection(state, status),
+    settings: () => ({ ...state.settings }),
     setCatalog(catalog: readonly Emote[]) {
       if (!closed)
         state = { ...state, catalog: initialMarketState({ now: state.at, catalog }).catalog };

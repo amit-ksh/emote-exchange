@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { readFileSync } from "node:fs";
 import {
   createChatOut,
@@ -12,6 +13,7 @@ import {
   openStore,
 } from "@emote-exchange/twitch-kit";
 import type { MarketMoment } from "./engine/market.ts";
+import { defaultMarketSettings } from "./engine/settings.ts";
 import { createMarketRuntime } from "./market-runtime.ts";
 import { marketMigrations } from "./market-store.ts";
 import type { FoundationDisplay } from "./public-state.ts";
@@ -181,6 +183,63 @@ export function createExchangeRuntime({
         moments.map((moment) => ({ ...moment })),
       );
     publishState = () => publishMarket([]);
+    app.post("/api/market/action", async (context) => {
+      const body: unknown = await context.req.json().catch(() => null);
+      if (!body || typeof body !== "object" || !("type" in body))
+        return context.json({ error: "Choose a valid market action." }, 400);
+      const cause = { id: `dashboard:${randomUUID()}`, origin: "sim" as const };
+      if (body.type === "Pause" && "value" in body && typeof body.value === "boolean")
+        market.receive({ type: "Pause", ...cause, value: body.value });
+      else if (
+        body.type === "Freeze" &&
+        "userId" in body &&
+        typeof body.userId === "string" &&
+        "value" in body &&
+        typeof body.value === "boolean" &&
+        market.display().traders.some((row) => row.userId === body.userId)
+      )
+        market.receive({ type: "Freeze", ...cause, userId: body.userId, value: body.value });
+      else if (
+        body.type === "Delist" &&
+        "ticker" in body &&
+        typeof body.ticker === "string" &&
+        market.display().listings.some((row) => row.ticker === body.ticker)
+      )
+        market.receive({ type: "Delist", ...cause, ticker: body.ticker });
+      else if (body.type === "Reset" && "confirmation" in body && body.confirmation === "RESET")
+        market.receive({ type: "Reset", ...cause, confirmation: "RESET" });
+      else return context.json({ error: "Choose a valid action, target and confirmation." }, 400);
+      return context.json({ ok: true });
+    });
+    app.get("/api/market/settings", (context) => context.json(market.settings()));
+    app.post("/api/market/settings", async (context) => {
+      const body: unknown = await context.req.json().catch(() => null);
+      if (!body || typeof body !== "object" || Array.isArray(body))
+        return context.json({ error: "Choose valid market settings." }, 400);
+      const keys = ["STARTING_COINS", "FEE", "TRADE_COOLDOWN_MS", "HEAT_HALF_LIFE"];
+      const reset = Object.keys(body).length === 1 && "reset" in body && body.reset === true;
+      if (!reset && Object.keys(body).some((key) => !keys.includes(key)))
+        return context.json({ error: "Choose valid market settings." }, 400);
+      try {
+        market.receive({
+          type: "Settings",
+          settings: reset
+            ? {
+                ...market.settings(),
+                ...Object.fromEntries(
+                  keys.map((key) => [
+                    key,
+                    defaultMarketSettings[key as keyof typeof defaultMarketSettings],
+                  ]),
+                ),
+              }
+            : { ...market.settings(), ...body },
+        });
+        return context.json(market.settings());
+      } catch {
+        return context.json({ error: "Choose settings within the allowed ranges." }, 400);
+      }
+    });
     app.post("/api/sim/start", async (context) => {
       if (simulator.publicState().running)
         return context.json({ error: "Stop the current simulation before starting another." }, 409);
