@@ -6,7 +6,7 @@ This repository focuses on one Codex x TwitchCon hackathon entry. The plan is to
 
 ## Status
 
-The single-app plan, local foundation and K1–K3 are complete: private SQLite storage, guarded HTTP actions, bounded SSE, Twitch OAuth and incoming EventSub events. A live chat message has been verified in the dashboard counter. Queued chat sending, emote catalogs, simulation, market rules and the complete overlay remain in [the sprint plan](docs/sprints/README.md).
+The single-app plan, local foundation and K1–K4 are complete: private SQLite storage, guarded HTTP actions, bounded SSE, Twitch OAuth, incoming EventSub events and queued chat sending. Live reception and the dashboard's test-message button have been verified in Twitch chat. Emote catalogs, simulation, market rules and the complete overlay remain in [the sprint plan](docs/sprints/README.md).
 
 ## Quick start
 

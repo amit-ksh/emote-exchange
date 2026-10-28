@@ -49,6 +49,7 @@ test("disconnect cancels subscriptions and late unauthorized responses cannot re
   t.after(() => runtime.close());
   runtime.syncAuth();
   socket.receive(welcome);
+  await settle();
   assert.equal(finish.length, 5);
   connected = false;
   runtime.syncAuth();

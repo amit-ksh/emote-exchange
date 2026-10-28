@@ -702,3 +702,47 @@ html[data-view="overlay"] #root {
 .subscription-enabled {
   color: var(--accent);
 }
+.chat-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px;
+  margin: 24px 0 16px;
+}
+.quiet-control {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  padding: 12px 0;
+}
+.quiet-control input {
+  width: 20px;
+  height: 20px;
+  accent-color: var(--accent);
+}
+.chat-log-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
+  gap: 32px;
+  margin-top: 24px;
+}
+.chat-log {
+  list-style: none;
+  padding: 0;
+  max-height: 320px;
+  overflow-y: auto;
+}
+.chat-log-item {
+  padding: 12px 0;
+  border-top: 1px solid var(--line);
+  overflow-wrap: anywhere;
+}
+.chat-log-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 0.75rem;
+  color: var(--muted);
+  margin-bottom: 8px;
+}

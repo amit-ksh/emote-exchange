@@ -1,6 +1,6 @@
 # Emote Exchange
 
-A local play-money emote market for Twitch, displayed through an OBS browser source. K1–K3 are implemented: SQLite storage, guarded actions, bounded SSE, Twitch sign-in, incoming EventSub events and live counters. Queued sending, the emote catalog, Simulator and market rules remain in [the implementation plan](../../docs/implementation-plan.md).
+A local play-money emote market for Twitch, displayed through an OBS browser source. K1–K4 are implemented: SQLite storage, guarded actions, bounded SSE, Twitch sign-in, incoming EventSub events, live counters and queued chat sending. The emote catalog, Simulator and market rules remain in [the implementation plan](../../docs/implementation-plan.md).
 
 ## Run the foundation
 
@@ -35,6 +35,14 @@ Follow [the setup guide](../../docs/setup-guide.md) to register one confidential
 After broadcaster login, the incoming-events panel should show **EventSub connected** and five **enabled** subscriptions. Type in your channel’s Twitch chat and check that **Live events** and **Chat messages** increase. The browser receives counts and fixed connection status; incoming chat text stays server-side. Counters reset on app restart. The header and overlay show **Twitch connected** when authorized; without credentials they show **Demo mode**. Market widgets and simulated scenarios are still pending.
 
 EventSub recovers from lost connections with backoff and recreates subscriptions. Twitch reconnect handoffs retain subscriptions without creating duplicates. Missed events during a lost connection cannot be replayed. For a local Twitch CLI mock, override both `EVENTSUB_WS_URL` and `EVENTSUB_SUBSCRIPTIONS_URL` as shown in [K3](../../docs/sprints/sprint-1-twitch-kit.md). Overrides accept only the official Twitch endpoints or explicit HTTP/WS loopback mock destinations.
+
+## Chat output
+
+Under **Test your chat connection**, click **Send test message** to post exactly “Emote Exchange connected” to your channel. The app selects the bot role when connected, otherwise the broadcaster. The **Sent and dropped** log records the outcome; HTTP acceptance alone does not count as a sent message. This is an explicit live action, separate from previews and simulator controls.
+
+**Preview without sending** adds the same text to **Would have said**, even while Twitch is connected. All simulated output takes that path. Without a broadcaster connection, live sending is disabled and app output stays local. **Quiet mode** pauses live sending and discards waiting live messages; its setting survives app restart. A request already delivered to Twitch cannot be recalled.
+
+The queue sends at most once per second and 18 times in any rolling 30 seconds, counting retry attempts too. Replies precede ambient output. Pending output expires after 30 seconds, duplicate text collapses, and diagnostics retain the latest 100 entries. Logs and counters reset on app restart; queued messages are not replayed. Twitch drop codes use a fixed safe vocabulary; unknown codes show `twitch_dropped`, never arbitrary provider error text. Incoming chat text is never added to this log.
 
 ## Checks and troubleshooting
 

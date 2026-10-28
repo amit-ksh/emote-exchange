@@ -7,10 +7,14 @@ export type { AuthPublicState, AuthRole } from "./auth.ts";
 export { createTwitchAuth } from "./auth.ts";
 export type { OverlayBus, PublicMoment } from "./bus.ts";
 export { createOverlayBus } from "./bus.ts";
+export type { ChatOutLog, Say } from "./chat-out/queue.ts";
+export type { ChatOutPublicState } from "./chat-out/runner.ts";
+export { createChatOut } from "./chat-out/runner.ts";
 export type { ChatEvent, Emote, MessagePart } from "./eventsub/normalize.ts";
 export { normalizeEvent } from "./eventsub/normalize.ts";
 export type { EventSubPublicState } from "./eventsub/runner.ts";
 export { createEventSub, eventSubEndpoints } from "./eventsub/runner.ts";
+export { createHelix } from "./helix.ts";
 export { startHttpServer } from "./server.ts";
 export { openStore } from "./store/index.ts";
 

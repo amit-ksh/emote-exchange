@@ -1,6 +1,7 @@
 import { StrictMode, useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import type { FoundationSnapshot } from "../../src/public-state.ts";
+import { ChatOutPanel, readChatOut } from "./chat-out.tsx";
 import { EventSubPanel, readEventSub } from "./eventsub.tsx";
 import "./styles.css";
 
@@ -37,6 +38,7 @@ function readSnapshot(value: unknown): FoundationSnapshot | null {
   const candidate = value as Record<string, unknown>;
   const auth = readAuth(candidate.auth);
   const eventsub = readEventSub(candidate.eventsub);
+  const chatOut = readChatOut(candidate.chatOut);
   if (
     candidate.v !== 1 ||
     !Number.isSafeInteger(candidate.seq) ||
@@ -50,7 +52,8 @@ function readSnapshot(value: unknown): FoundationSnapshot | null {
     (candidate.connectionChecks as number) < 0 ||
     !Array.isArray(candidate.moments) ||
     !auth ||
-    !eventsub
+    !eventsub ||
+    !chatOut
   ) {
     return null;
   }
@@ -82,6 +85,7 @@ function readSnapshot(value: unknown): FoundationSnapshot | null {
     connectionChecks: candidate.connectionChecks as number,
     auth,
     eventsub,
+    chatOut,
     moments: candidate.moments.filter(
       (moment): moment is FoundationSnapshot["moments"][number] =>
         typeof moment === "object" &&
@@ -352,6 +356,10 @@ function Dashboard() {
 
         <TwitchConnection auth={snapshot?.auth} />
         <EventSubPanel connection={snapshot?.eventsub} />
+        <ChatOutPanel
+          output={snapshot?.chatOut}
+          connected={snapshot?.auth.broadcaster.connected ?? false}
+        />
         <section className="overlay-setup" aria-labelledby="overlay-title">
           <div className="section-heading">
             <div>

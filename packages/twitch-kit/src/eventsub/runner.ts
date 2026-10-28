@@ -1,4 +1,6 @@
 import type { AuthRole } from "../auth.ts";
+import type { HelixClient } from "../helix.ts";
+import { createHelix } from "../helix.ts";
 import type { ChatEvent, NormalizerOptions } from "./normalize.ts";
 import { normalizeEvent } from "./normalize.ts";
 import type { ProtocolEffect, ProtocolInput } from "./protocol.ts";
@@ -68,6 +70,7 @@ interface RunnerOptions {
   subscriptionsUrl?: string;
   now?: () => number;
   fetcher?: typeof fetch;
+  helix?: HelixClient;
   createSocket?: (url: string) => Pick<WebSocket, "addEventListener" | "close">;
   autoTick?: boolean;
   onChange?: () => void;
@@ -79,7 +82,9 @@ interface RunnerOptions {
 export function createEventSub(options: RunnerOptions) {
   const endpoints = eventSubEndpoints(options.wsUrl, options.subscriptionsUrl);
   const now = options.now ?? Date.now;
-  const fetcher = options.fetcher ?? fetch;
+  const helix =
+    options.helix ??
+    createHelix({ clientId: options.clientId, auth: options.auth, fetcher: options.fetcher, now });
   const sockets = new Map<string, Pick<WebSocket, "addEventListener" | "close">>();
   const controllers = new Set<AbortController>();
   let state = initialProtocolState();
@@ -145,45 +150,31 @@ export function createEventSub(options: RunnerOptions) {
                 : type === "channel.raid"
                   ? { to_broadcaster_user_id: id }
                   : { broadcaster_user_id: id };
-          for (let attempt = 0; attempt < 2; attempt++) {
-            const token = options.auth.accessToken("broadcaster");
-            const remaining = effect.deadline - now();
-            if (closed || run !== generation || !token || remaining <= 0) break;
-            const response = await fetcher(endpoints.subscriptionsUrl, {
-              method: "POST",
-              redirect: "error",
-              headers: {
-                Authorization: `Bearer ${token}`,
-                "Client-Id": options.clientId,
-                "Content-Type": "application/json",
-              },
-              signal: AbortSignal.any([
-                controller.signal,
-                AbortSignal.timeout(Math.max(1, Math.min(10_000, remaining))),
-              ]),
-              body: JSON.stringify({
-                type,
-                version: type === "channel.follow" ? "2" : "1",
-                condition,
-                transport: { method: "websocket", session_id: effect.session },
-              }),
-            });
-            if (closed || run !== generation) {
-              await response.body?.cancel();
-              break;
-            }
-            httpStatus = response.status;
-            if (response.status === 401 && attempt === 0) {
-              await response.body?.cancel();
-              await options.auth.refresh("broadcaster");
-              continue;
-            }
-            if (response.status === 202) {
-              const body = record(await response.json());
-              enabled = Array.isArray(body.data) && record(body.data[0]).status === "enabled";
-            } else await response.body?.cancel();
-            break;
+          if (closed || run !== generation) return;
+          const response = await helix.request({
+            role: "broadcaster",
+            path: "/eventsub/subscriptions",
+            url: endpoints.subscriptionsUrl,
+            method: "POST",
+            signal: controller.signal,
+            deadline: effect.deadline,
+            beforeAttempt: async () => !closed && run === generation,
+            body: {
+              type,
+              version: type === "channel.follow" ? "2" : "1",
+              condition,
+              transport: { method: "websocket", session_id: effect.session },
+            },
+          });
+          if (closed || run !== generation) {
+            await response.body?.cancel();
+            return;
           }
+          httpStatus = response.status;
+          if (response.status === 202) {
+            const body = record(await response.json());
+            enabled = Array.isArray(body.data) && record(body.data[0]).status === "enabled";
+          } else await response.body?.cancel();
         } catch {
           /* Only fixed status and HTTP codes can leave the transport. */
         } finally {
@@ -301,6 +292,7 @@ export function createEventSub(options: RunnerOptions) {
         stop();
         closed = true;
         broadcasterId = undefined;
+        if (!options.helix) helix.close();
       }
     },
   };

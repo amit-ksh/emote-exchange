@@ -1,5 +1,7 @@
 import {
+  createChatOut,
   createEventSub,
+  createHelix,
   createHttpApp,
   createOverlayBus,
   createTwitchAuth,
@@ -30,7 +32,7 @@ export function createExchangeRuntime({
 }: ExchangeRuntimeOptions = {}) {
   const store = openStore({ filename });
   try {
-    const settings = store.settings({ connectionChecks: 0 });
+    const settings = store.settings({ connectionChecks: 0, quietMode: false });
     let publishState = () => {};
     let syncAuth = () => {};
     const auth = createTwitchAuth({
@@ -44,15 +46,28 @@ export function createExchangeRuntime({
         publishState();
       },
     });
+    const helix = createHelix({ auth, clientId, now });
+    const chatOut = createChatOut({
+      auth,
+      helix,
+      now,
+      quiet: settings.get("quietMode"),
+      onChange: () => publishState(),
+    });
     const eventsub = createEventSub({
       auth,
+      helix,
       clientId,
       wsUrl,
       subscriptionsUrl,
       now,
       onChange: () => publishState(),
+      wasSent: (messageId) => chatOut.wasSent(messageId),
     });
-    syncAuth = () => eventsub.syncAuth();
+    syncAuth = () => {
+      chatOut.syncAuth();
+      eventsub.syncAuth();
+    };
     const projection: FoundationDisplay = {
       app: "Emote Exchange",
       mode: "demo",
@@ -62,6 +77,7 @@ export function createExchangeRuntime({
       connectionChecks: settings.get("connectionChecks"),
       auth: auth.publicState(),
       eventsub: eventsub.publicState(),
+      chatOut: chatOut.publicState(),
     };
     if (!Number.isSafeInteger(projection.connectionChecks) || projection.connectionChecks < 0) {
       throw new Error("Stored local connection check count is invalid.");
@@ -83,11 +99,43 @@ export function createExchangeRuntime({
       connectionChecks: settings.get("connectionChecks"),
       auth: auth.publicState(),
       eventsub: eventsub.publicState(),
+      chatOut: chatOut.publicState(),
     });
     publishState = () =>
       bus.publish({
         ...display(),
       });
+    app.post("/api/chat-out/test", (context) => {
+      if (!auth.publicState().broadcaster.connected)
+        return context.json({ error: "Connect the broadcaster before sending a live test." }, 409);
+      if (chatOut.publicState().quiet)
+        return context.json({ error: "Turn off quiet mode before sending a live test." }, 409);
+      const accepted = chatOut.enqueue({
+        text: "Emote Exchange connected",
+        origin: "twitch",
+        priority: "reply",
+      });
+      return accepted
+        ? context.json({ ok: true })
+        : context.json({ error: "The test message could not be queued. Check the chat log." }, 409);
+    });
+    app.post("/api/chat-out/preview", (context) => {
+      chatOut.enqueue({ text: "Emote Exchange connected", origin: "sim", priority: "reply" });
+      return context.json({ ok: true });
+    });
+    app.post("/api/chat-out/quiet", async (context) => {
+      const body: unknown = await context.req.json().catch(() => null);
+      if (
+        !body ||
+        typeof body !== "object" ||
+        !("quiet" in body) ||
+        typeof body.quiet !== "boolean"
+      )
+        return context.json({ error: "Choose a valid quiet-mode setting." }, 400);
+      settings.set("quietMode", body.quiet);
+      chatOut.setQuiet(body.quiet);
+      return context.json({ ok: true });
+    });
     app.post("/api/setup/check", (context) => {
       const count = settings.get("connectionChecks");
       if (count >= Number.MAX_SAFE_INTEGER) {
@@ -102,6 +150,7 @@ export function createExchangeRuntime({
     let closed = false;
     return {
       app,
+      enqueueSay: chatOut.enqueue,
       initialize: async () => {
         await auth.initialize();
         eventsub.syncAuth();
@@ -110,7 +159,9 @@ export function createExchangeRuntime({
       close() {
         if (closed) return;
         closed = true;
+        chatOut.close();
         eventsub.close();
+        helix.close();
         auth.close();
         bus.close();
         store.close();

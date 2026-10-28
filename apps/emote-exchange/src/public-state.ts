@@ -1,5 +1,6 @@
 import type {
   AuthPublicState,
+  ChatOutPublicState,
   EventSubPublicState,
   PublicMoment,
 } from "@emote-exchange/twitch-kit";
@@ -13,6 +14,7 @@ export interface FoundationDisplay {
   connectionChecks: number;
   auth: AuthPublicState;
   eventsub: EventSubPublicState;
+  chatOut: ChatOutPublicState;
 }
 
 export interface FoundationSnapshot extends FoundationDisplay {

@@ -76,6 +76,7 @@ try {
     overlayUrl: `${origin}/overlay`,
     connectionChecks: 0,
     moments: [],
+    chatOut: { quiet: false, pending: 0, sending: false, sender: null, logs: [] },
     eventsub: {
       status: "disconnected",
       sessionStartedAt: null,

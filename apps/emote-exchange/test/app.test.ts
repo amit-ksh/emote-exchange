@@ -55,6 +55,7 @@ test("Exchange exposes an honest foundation-only display snapshot", async (conte
     overlayUrl: "http://127.0.0.1:4100/overlay",
     connectionChecks: 0,
     moments: [],
+    chatOut: { quiet: false, pending: 0, sending: false, sender: null, logs: [] },
     eventsub: {
       status: "disconnected",
       sessionStartedAt: null,
@@ -76,6 +77,64 @@ test("Exchange exposes an honest foundation-only display snapshot", async (conte
       bot: { connected: false, login: null, scopes: [], reconnect: false },
     },
   });
+});
+
+test("chat actions are guarded, demo preview stays local, and quiet mode persists", async (t) => {
+  const directory = mkdtempSync(join(tmpdir(), "emote-exchange-k4-"));
+  t.after(() => rmSync(directory, { recursive: true, force: true }));
+  const filename = join(directory, "state.sqlite");
+  const runtime = createExchangeRuntime({ filename });
+  const action = (path: string, body?: unknown) =>
+    runtime.app.request(`http://localhost:4100/api/chat-out/${path}`, {
+      method: "POST",
+      headers: {
+        Host: "localhost:4100",
+        Origin: "http://localhost:4100",
+        "X-CTA": "1",
+        "Content-Type": "application/json",
+      },
+      body: body === undefined ? undefined : JSON.stringify(body),
+    });
+  try {
+    for (const path of ["test", "preview", "quiet"])
+      assert.equal(
+        (
+          await runtime.app.request(`http://localhost:4100/api/chat-out/${path}`, {
+            method: "POST",
+            headers: { Host: "localhost:4100" },
+          })
+        ).status,
+        403,
+      );
+    assert.equal((await action("test")).status, 409);
+    assert.equal((await action("preview")).status, 200);
+    assert.equal((await action("quiet", { quiet: "true" })).status, 400);
+    assert.equal((await action("quiet", { quiet: true })).status, 200);
+    const view = await (
+      await runtime.app.request("http://localhost:4100/api/snapshot", {
+        headers: { Host: "localhost:4100" },
+      })
+    ).json();
+    assert.equal(view.chatOut.quiet, true);
+    assert.equal(view.chatOut.pending, 0);
+    assert.equal(view.chatOut.logs[0].kind, "would-have-said");
+    assert.equal(view.chatOut.logs[0].text, "Emote Exchange connected");
+    assert.equal(view.chatOut.logs[0].origin, "sim");
+  } finally {
+    runtime.close();
+  }
+  const restored = createExchangeRuntime({ filename });
+  try {
+    const view = await (
+      await restored.app.request("http://localhost:4100/api/snapshot", {
+        headers: { Host: "localhost:4100" },
+      })
+    ).json();
+    assert.equal(view.chatOut.quiet, true);
+    assert.deepEqual(view.chatOut.logs, []);
+  } finally {
+    restored.close();
+  }
 });
 
 test("a guarded local connection check is published and survives restart", async (context) => {
