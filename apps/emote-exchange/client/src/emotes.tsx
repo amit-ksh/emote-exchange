@@ -132,6 +132,9 @@ function SourceCount({ source }: { source?: CatalogSource }) {
 }
 export function EmoteCatalogPanel({ catalog }: { catalog?: CatalogPublicState }) {
   const [feedback, setFeedback] = useState("");
+  const [query, setQuery] = useState("");
+  const [providerFilter, setProviderFilter] = useState("all");
+  const [limit, setLimit] = useState(24);
   const [busy, setBusy] = useState(false);
   const refreshing = catalog?.sources.some((source) => source.status === "loading") ?? false;
   async function refresh() {
@@ -156,7 +159,7 @@ export function EmoteCatalogPanel({ catalog }: { catalog?: CatalogPublicState })
       <div className="section-heading">
         <div>
           <p className="eyebrow">THE EMOTE CATALOG</p>
-          <h2 id="catalog-title">Your channel, in emotes.</h2>
+          <h2 id="catalog-title">Emote catalog</h2>
         </div>
         <button
           className="button button-secondary"
@@ -174,29 +177,53 @@ export function EmoteCatalogPanel({ catalog }: { catalog?: CatalogPublicState })
         bundled originals. Demo emotes work offline; provider sets refresh in the background every
         30 minutes.
       </p>
-      <table className="catalog-table">
-        <caption className="sr-only">Emote counts by provider and scope</caption>
-        <thead>
-          <tr>
-            <th scope="col">Provider</th>
-            <th scope="col">Channel</th>
-            <th scope="col">Global</th>
-          </tr>
-        </thead>
-        <tbody>
-          {providers.map((provider) => (
-            <tr key={provider}>
-              <th scope="row">{names[provider]}</th>
-              <td data-provider={provider} data-scope="channel">
+      <div className="provider-grid">
+        {providers.map((provider) => (
+          <div className="provider-tile" key={provider}>
+            <h3>{names[provider]}</h3>
+            <div className="provider-counts">
+              <div data-provider={provider} data-scope="channel">
+                <span>Channel</span>
                 <SourceCount source={source(provider, "channel")} />
-              </td>
-              <td data-provider={provider} data-scope="global">
+              </div>
+              <div data-provider={provider} data-scope="global">
+                <span>Global</span>
                 <SourceCount source={source(provider, "global")} />
-              </td>
-            </tr>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+      <div className="emote-toolbar">
+        <label>
+          Search emotes
+          <input
+            type="search"
+            placeholder="Search emote names"
+            value={query}
+            onChange={(event) => {
+              setQuery(event.target.value);
+              setLimit(24);
+            }}
+          />
+        </label>
+        <div className="filter-chips">
+          {["all", ...providers, "demo"].map((provider) => (
+            <button
+              type="button"
+              key={provider}
+              aria-pressed={providerFilter === provider}
+              onClick={() => {
+                setProviderFilter(provider);
+                setLimit(24);
+              }}
+            >
+              {provider === "all" ? "All" : names[provider as keyof typeof names]}
+            </button>
           ))}
-        </tbody>
-      </table>
+        </div>
+      </div>
+
       {catalog?.sources.some(
         (source) => source.provider === "7tv" && source.status === "not-configured",
       ) && (
@@ -212,28 +239,56 @@ export function EmoteCatalogPanel({ catalog }: { catalog?: CatalogPublicState })
         {feedback}
       </p>
       <ul className="emote-examples" aria-label="Emote samples">
-        {catalog?.examples.map((emote) => (
-          <li className="emote-example" key={`${emote.provider}:${emote.scope}:${emote.key}`}>
-            <span className="emote-image">
-              <img
-                src={emote.imageUrl}
-                alt=""
-                width="48"
-                height="48"
-                loading="lazy"
-                decoding="async"
-                referrerPolicy="no-referrer"
-                data-provider={emote.provider}
-                onError={(event) => {
-                  event.currentTarget.hidden = true;
-                }}
-              />
-            </span>
-            <span className="emote-name">{emote.name}</span>
-            <span className="catalog-source-status">{names[emote.provider]}</span>
-          </li>
-        ))}
+        {catalog?.examples
+          .filter(
+            (emote) =>
+              (providerFilter === "all" || emote.provider === providerFilter) &&
+              emote.name.toLowerCase().includes(query.toLowerCase()),
+          )
+          .slice(0, limit)
+          .map((emote) => (
+            <li className="emote-example" key={`${emote.provider}:${emote.scope}:${emote.key}`}>
+              <span className="emote-image">
+                <span aria-hidden="true">✦</span>
+                <img
+                  src={emote.imageUrl}
+                  alt=""
+                  width="48"
+                  height="48"
+                  loading="lazy"
+                  decoding="async"
+                  referrerPolicy="no-referrer"
+                  data-provider={emote.provider}
+                  onError={(event) => {
+                    event.currentTarget.hidden = true;
+                  }}
+                />
+              </span>
+              <span className="emote-name">{emote.name}</span>
+              <span className="catalog-source-status">{names[emote.provider]}</span>
+            </li>
+          ))}
       </ul>
+      {catalog &&
+        !catalog.examples.some(
+          (emote) =>
+            (providerFilter === "all" || emote.provider === providerFilter) &&
+            emote.name.toLowerCase().includes(query.toLowerCase()),
+        ) && <p className="empty-state">No emotes match your search.</p>}
+      {catalog &&
+        catalog.examples.filter(
+          (emote) =>
+            (providerFilter === "all" || emote.provider === providerFilter) &&
+            emote.name.toLowerCase().includes(query.toLowerCase()),
+        ).length > limit && (
+          <button
+            className="button button-secondary"
+            type="button"
+            onClick={() => setLimit(limit + 24)}
+          >
+            Show more
+          </button>
+        )}
     </section>
   );
 }

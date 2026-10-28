@@ -113,7 +113,7 @@ export function ChatOutPanel({
         path === "test"
           ? "Test message queued. Check the sent log below."
           : path === "preview"
-            ? "Preview added to Would have said."
+            ? "Preview added to activity."
             : quiet
               ? "Quiet mode is on. Live sending is paused."
               : "Quiet mode is off.",
@@ -126,10 +126,11 @@ export function ChatOutPanel({
     }
   }
   const logs = output?.logs ?? [];
+  const [filter, setFilter] = useState("All");
   return (
     <section className="overlay-setup" aria-labelledby="chat-out-title">
       <p className="eyebrow">OUTGOING CHAT</p>
-      <h2 id="chat-out-title">Test your chat connection.</h2>
+      <h2 id="chat-out-title">Test your chat connection</h2>
       <p>The live test posts “Emote Exchange connected” to your channel.</p>
       <div className="chat-controls">
         <button
@@ -175,22 +176,31 @@ export function ChatOutPanel({
       <p className="copy-feedback" role="status">
         {feedback}
       </p>
-      <div className="chat-log-grid">
-        <div>
-          <h3>Sent and dropped</h3>
-          <OutputLog
-            entries={logs.filter((entry) => entry.kind !== "would-have-said")}
-            empty="No live output yet."
-          />
-        </div>
-        <div>
-          <h3>Would have said</h3>
-          <OutputLog
-            entries={logs.filter((entry) => entry.kind === "would-have-said")}
-            empty="Previews and simulated output appear here."
-          />
-        </div>
+      <div className="activity-head">
+        <h3>Activity</h3>
+        <fieldset className="segmented" aria-label="Filter chat activity">
+          {["All", "Sent", "Dropped", "Preview"].map((name) => (
+            <button
+              type="button"
+              key={name}
+              aria-pressed={filter === name}
+              onClick={() => setFilter(name)}
+            >
+              {name}
+            </button>
+          ))}
+        </fieldset>
       </div>
+      <OutputLog
+        entries={logs.filter(
+          (entry) =>
+            filter === "All" ||
+            (filter === "Preview"
+              ? entry.kind === "would-have-said"
+              : entry.kind === filter.toLowerCase()),
+        )}
+        empty="No chat output yet."
+      />
     </section>
   );
 }

@@ -41,12 +41,6 @@ function EmoteImage({ url, size = 40 }: { url?: string; size?: number }) {
     </span>
   );
 }
-function shortName(value: string, max: number) {
-  const chars = [...value];
-  return chars.length <= max
-    ? value
-    : `${chars.slice(0, max - 5).join("")}…${chars.slice(-4).join("")}`;
-}
 const Tape = memo(function Tape({
   listings,
   reduced,
@@ -73,7 +67,9 @@ const Tape = memo(function Tape({
   if (!listings.length)
     return (
       <section className="ex-tape ex-panel" aria-label="Price tape">
-        <span className="ex-tape-brand">EX</span>
+        <span className="ex-tape-brand" aria-hidden="true">
+          ●
+        </span>
         <p className="ex-tape-empty">
           Two chatters list an emote. Type <strong>!market</strong>
         </p>
@@ -200,11 +196,9 @@ function PricePlot({
     context.arc(x(now), y(listing.price), 4, 0, Math.PI * 2);
     context.fillStyle = "#F5F2FA";
     context.fill();
-    context.font = '24px "JetBrains Mono", monospace';
+    context.font = '24px "Inter Tight", sans-serif';
     context.fillStyle = "#D4D0DF";
     context.textAlign = "right";
-    context.fillText(compactCoins(max), 472, 28);
-    context.fillText(compactCoins(min), 472, 103);
   }, [listing, now, visible]);
   return (
     <canvas
@@ -227,7 +221,7 @@ function ChartFace({
   return (
     <div className="ex-chart-face">
       <div className="ex-chart-heading">
-        <span className="ex-label">HOTTEST LISTING</span>
+        <span className="ex-label">Hottest</span>
         <EmoteImage url={listing.imageUrl} size={64} />
       </div>
       <h2 className="ex-chart-ticker" title={listing.ticker}>
@@ -294,8 +288,8 @@ const Board = memo(function Board({ market, pulse }: { market: OverlayMarket; pu
       aria-label="Top Traders"
     >
       <header>
-        <h2>TOP TRADERS</h2>
-        <span>NET WORTH</span>
+        <h2>Top traders</h2>
+        <span>Net worth</span>
       </header>
       {!top.length ? (
         <p className="ex-board-empty">
@@ -313,7 +307,7 @@ const Board = memo(function Board({ market, pulse }: { market: OverlayMarket; pu
                 style={{ color: readableChatColor(trader.color) }}
                 title={trader.name}
               >
-                {shortName(trader.name, 11)}
+                {trader.name}
               </span>
               <span className="ex-worth">
                 {trader.capped ? "≥" : ""}
@@ -369,7 +363,7 @@ function Feed({
 }) {
   return (
     <section className="ex-feed" aria-label="Recent market events">
-      <h2 className="ex-label">ON THE FLOOR</h2>
+      <h2 className="ex-label">Recent activity</h2>
       <div>
         {moments.map((moment) => (
           <article
@@ -380,25 +374,33 @@ function Feed({
           >
             <EmoteImage
               url={listings.find((listing) => listing.ticker === moment.ticker)?.imageUrl}
-              size={28}
+              size={32}
             />
             {moment.kind === "TRADE" ? (
               <>
                 <span className="ex-feed-name" title={moment.name}>
-                  {shortName(moment.name ?? "Trader", 7)}
+                  {moment.name ?? "Trader"}
                 </span>
                 <div className="ex-feed-trade">
                   <strong title={`${moment.side} ${moment.shares}`}>
-                    {moment.side?.toUpperCase()}{" "}
-                    {new Intl.NumberFormat("en-US", {
-                      notation: "compact",
-                      maximumSignificantDigits: 3,
-                    }).format(moment.shares ?? 0)}
+                    {moment.side?.toUpperCase()}
                   </strong>
                   <span title={moment.ticker}>{moment.ticker}</span>
                   <span>{priceLabel(moment.price ?? 1)}</span>
                 </div>
               </>
+            ) : moment.kind === "FOLLOW" || moment.kind === "VISA" ? (
+              <p className="ex-feed-system">
+                <span>{moment.name ?? "Trader"}</span>
+                <span>joined</span>
+                <strong>+{moment.coins ?? 0}</strong>
+              </p>
+            ) : moment.kind === "RAID" ? (
+              <p className="ex-feed-system">
+                <span>{moment.name ?? "Channel"}</span>
+                <span>raided</span>
+                <strong>{moment.viewers}</strong>
+              </p>
             ) : (
               <p>{feedText(moment)}</p>
             )}
@@ -438,7 +440,7 @@ function bannerCopy(moment: MarketMoment, now: number) {
       return {
         label: "RAID INCOMING",
         title: `${compactCoins(moment.viewers ?? 0)} viewers`,
-        detail: `${moment.name ?? "A channel"} arrived · first-time chatters earn a Visa`,
+        detail: `${moment.name ?? "A channel"} arrived. New chatters get bonus Coins with a Raid Visa.`,
       };
     case "DELIST":
       return {

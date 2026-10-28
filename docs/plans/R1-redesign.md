@@ -1,0 +1,3 @@
+# R1 presentation redesign
+
+Implement the user's `docs/redesign-prompt.md` and Downloads/design.html reference: neutral tonal surfaces, lime, Inter Tight and Doto; six dashboard views and a matching dark broadcast overlay. The explicit brief supersedes the previous purple/font art direction. No engine, protocol, reader or server changes; no dependency added. Real data only, with optional future controls deferred to E5. Preserve existing guarded handlers and accessible controls, reduce technical details to disclosures, and verify light/dark desktop/mobile and full/half overlay before committing.

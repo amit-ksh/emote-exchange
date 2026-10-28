@@ -102,9 +102,22 @@ export function EventSubPanel({ connection }: { connection?: EventSubPublicState
       <ul className="subscription-list" aria-label="Twitch subscriptions">
         {connection?.subscriptions.map((subscription) => (
           <li className="subscription-item" key={subscription.type}>
-            <span>{subscription.type}</span>
+            <span>
+              <strong>
+                {(
+                  {
+                    "channel.chat.message": "Chat messages",
+                    "channel.follow": "Follows",
+                    "channel.raid": "Raids",
+                    "stream.online": "Stream online",
+                    "stream.offline": "Stream offline",
+                  } as Record<string, string>
+                )[subscription.type] ?? subscription.type}
+              </strong>
+              <small>{subscription.type}</small>
+            </span>
             <span className={subscription.status === "enabled" ? "subscription-enabled" : ""}>
-              {subscription.status}
+              {subscription.status === "enabled" ? "Connected" : "Disconnected"}
               {subscription.status === "failed" && subscription.httpStatus
                 ? ` · HTTP ${subscription.httpStatus}`
                 : ""}

@@ -202,7 +202,7 @@ function ConnectionPanel({ auth }: { auth: FoundationSnapshot["auth"] | undefine
       <div className="section-heading">
         <div>
           <p className="eyebrow">YOUR CHANNEL</p>
-          <h2 id="twitch-title">Connect Twitch.</h2>
+          <h2 id="twitch-title">Connect Twitch</h2>
         </div>
       </div>
       <p className="copy-feedback" role="status">
@@ -224,6 +224,10 @@ function ConnectionPanel({ auth }: { auth: FoundationSnapshot["auth"] | undefine
             <div>
               <h3>{role === "broadcaster" ? "Broadcaster" : "Bot · optional"}</h3>
               <p>{auth[role].connected ? `Connected as @${auth[role].login}` : "Not connected"}</p>
+              <details>
+                <summary>Granted scopes</summary>
+                <p>{auth[role].scopes.join(", ") || "No permissions granted yet."}</p>
+              </details>
             </div>
             {auth[role].connected ? (
               <button
@@ -248,179 +252,246 @@ function ConnectionPanel({ auth }: { auth: FoundationSnapshot["auth"] | undefine
           </div>
         ))
       )}
-      <p className="copy-feedback">
-        Incoming Twitch events stay on this machine. The simulator is ready; market rules are next.
-      </p>
+      <p className="copy-feedback">Incoming Twitch events stay on this machine.</p>
     </section>
   );
 }
 
+const views = ["Overview", "Setup", "Demo", "Emotes", "Chat", "Diagnostics"] as const;
+type View = (typeof views)[number];
 function Dashboard() {
   const { snapshot, status } = useFoundation("dashboard");
-  const [checkStatus, setCheckStatus] = useState<"idle" | "checking" | "success" | "failed">(
-    "idle",
-  );
-  const fallbackOverlayUrl = new URL("/overlay", window.location.origin);
-  fallbackOverlayUrl.hostname = "127.0.0.1";
-  const overlayUrl = snapshot?.overlayUrl ?? fallbackOverlayUrl.href;
-  const connectionLabel = {
-    connecting: "Connecting to local server",
-    connected: "Receiving local updates",
-    reconnecting: "Reconnecting to local server",
-  }[status];
-
+  const [view, setView] = useState<View>("Overview");
+  useEffect(() => {
+    const navigate = () => {
+      const hash = window.location.hash;
+      if (hash === "#twitch-title") setView("Setup");
+      if (hash === "#eventsub-title") setView("Diagnostics");
+      if (hash === "#overlay-title") setView("Overview");
+    };
+    navigate();
+    window.addEventListener("hashchange", navigate);
+    return () => window.removeEventListener("hashchange", navigate);
+  }, []);
+  const [theme, setTheme] = useState(() => {
+    try {
+      return localStorage.getItem("exchange-theme") ?? "system";
+    } catch {
+      return "system";
+    }
+  });
+  useEffect(() => {
+    if (theme === "system") delete document.documentElement.dataset.theme;
+    else document.documentElement.dataset.theme = theme;
+    try {
+      localStorage.setItem("exchange-theme", theme);
+    } catch {
+      /* Storage is optional. */
+    }
+  }, [theme]);
+  const current = status === "connected";
+  const connected = current && !!snapshot?.auth.broadcaster.connected;
+  const overlay = current && (snapshot?.overlayClients ?? 0) > 0;
+  const online =
+    connected &&
+    snapshot?.eventsub.status === "connected" &&
+    snapshot.eventsub.streamStatus === "online";
+  const complete = Number(connected) + Number(overlay) + Number(online);
+  const url = new URL("/overlay", window.location.origin);
+  url.hostname = "127.0.0.1";
+  const subtitles: Record<View, string> = {
+    Overview: "Your channel, ready for the Exchange.",
+    Setup: "Connect your channel. Keep control on your machine.",
+    Demo: "Try the Exchange with simulated chat.",
+    Emotes: "The names behind your market.",
+    Chat: "Manage what the Exchange sends to your channel.",
+    Diagnostics: "A closer look at your Twitch connection.",
+  };
+  const [checkStatus, setCheckStatus] = useState("");
   async function checkLocalConnection() {
-    setCheckStatus("checking");
     try {
       const response = await fetch("/api/setup/check", {
         method: "POST",
         headers: { "X-CTA": "1" },
       });
-      if (!response.ok) throw new Error("Local check failed");
-      setCheckStatus("success");
+      if (!response.ok) throw new Error();
+      setCheckStatus("Local connection checked.");
     } catch {
-      setCheckStatus("failed");
+      setCheckStatus("Could not complete the check. Try again.");
     }
   }
-
   return (
     <div className="dashboard">
       <a className="skip-link" href="#main">
         Skip to content
       </a>
-      <header className="site-header">
+      <aside className="sidebar">
         <Wordmark />
-        <div className="header-context">
-          <span className="local-label">LOCAL WORKSPACE</span>
-          <span className="mode-tag">
-            {snapshot?.mode === "live" ? "Twitch connected" : "Demo mode"}
-          </span>
-          {snapshot?.simulatorRunning && <span className="sim-badge">SIM</span>}
-        </div>
-      </header>
-
-      <main id="main">
-        {snapshot?.mode === "demo" && (
-          <aside className="demo-banner">
-            <strong>Demo mode: simulated chat only</strong>
-            <a href="/setup-guide" target="_blank" rel="noreferrer">
-              Twitch setup guide ↗
-            </a>
-          </aside>
-        )}
-        <section className="intro" aria-labelledby="intro-title">
-          <div className="intro-copy">
-            <p className="eyebrow">CHAT DRIVES THE MARKET.</p>
-            <h1 id="intro-title">
-              A little emote.
-              <br />A lot of attention.
-            </h1>
-            <p className="intro-description">
-              Your channel’s emotes, a play-money market, and a front-row seat in OBS. Connect
-              Twitch or start a demo to bring the Exchange to life.
-            </p>
-          </div>
-          <aside className="foundation-status" aria-labelledby="foundation-title">
-            <div className="status-heading">
-              <span className={`status-indicator status-indicator--${status}`} aria-hidden="true" />
-              <span className="eyebrow">CONNECTION STATUS</span>
-            </div>
-            <h2 id="foundation-title">
-              {snapshot ? "Your Exchange is ready." : "Checking the local server."}
-            </h2>
-            <p>
-              Chat drives Prices and Trades. Open the overlay to see the market, or use the
-              simulator for a dry run.
-            </p>
-            <div className="connection-status" role="status">
-              <span>{connectionLabel}</span>
-              <span className="connection-glyph" aria-hidden="true">
-                {status === "connected" ? "✓" : "↻"}
+        <nav aria-label="Main navigation">
+          {views.map((name, index) => (
+            <button
+              type="button"
+              key={name}
+              className={view === name ? "nav-pill active" : "nav-pill"}
+              aria-current={view === name ? "page" : undefined}
+              onClick={() => setView(name)}
+            >
+              <span className="nav-icon" aria-hidden="true">
+                {["◫", "◎", "▷", "✦", "≡", "⌁"][index]}
               </span>
+              <span>{name}</span>
+              {name === "Setup" && <small>{complete}/3</small>}
+              {name === "Emotes" && <small>{snapshot?.catalog.total ?? "—"}</small>}
+              {name === "Demo" && snapshot?.simulatorRunning && (
+                <small>
+                  <i className="status-dot" /> Running
+                </small>
+              )}
+            </button>
+          ))}
+        </nav>
+        <div className="sidebar-bottom">
+          <div className="mode-card">
+            <span className="tag">{snapshot?.mode === "live" ? "Live" : "Demo"}</span>
+            <p>
+              {snapshot?.mode === "live"
+                ? "Connected to your Twitch channel. Your Exchange stays on this machine."
+                : "Simulated chat only. Your Twitch stream is not affected."}
+            </p>
+            <span className="connection-note" role="status">
+              {status === "connected"
+                ? "● Local connection ready"
+                : status === "connecting"
+                  ? "Connecting…"
+                  : "Reconnecting…"}
+            </span>
+          </div>
+          <button
+            className="button button-secondary theme-toggle"
+            type="button"
+            onClick={() =>
+              setTheme(
+                (
+                  theme === "system"
+                    ? matchMedia("(prefers-color-scheme: dark)").matches
+                    : theme === "dark"
+                )
+                  ? "light"
+                  : "dark",
+              )
+            }
+            aria-label="Toggle color theme"
+          >
+            ◐ <span>Appearance</span>
+            <small>{theme}</small>
+          </button>
+        </div>
+      </aside>
+      <main id="main" className="workspace">
+        <header className="page-header">
+          <div>
+            <h1>
+              {view}
+              {view === "Demo" && snapshot?.simulatorRunning && <span className="tag">SIM</span>}
+            </h1>
+            <p>{subtitles[view]}</p>
+          </div>
+          <span className="page-meta">Play Coins. No real money.</span>
+        </header>
+        {!current && (
+          <p className="inline-notice" role="status">
+            {status === "connecting"
+              ? "Loading your Exchange…"
+              : "Connection interrupted. Showing the last available state while we reconnect."}
+          </p>
+        )}
+        {view === "Overview" && (
+          <>
+            <div className="overview-stats">
+              {[
+                ["Mode", snapshot?.mode === "live" ? "Live" : "Demo", "Local workspace"],
+                [
+                  "Twitch",
+                  connected ? "Connected" : "Not connected",
+                  connected ? "Ready" : "Needs setup",
+                ],
+                [
+                  "Overlay",
+                  snapshot ? String(snapshot.overlayClients) : "—",
+                  overlay ? "Receiving updates" : "Waiting",
+                ],
+                [
+                  "Stream",
+                  online
+                    ? "Live"
+                    : snapshot?.eventsub.streamStatus === "offline"
+                      ? "Offline"
+                      : "Unknown",
+                  online ? "On air" : "Waiting for Twitch",
+                ],
+              ].map(([label, value, note]) => (
+                <section className="stat-card" key={label}>
+                  <span>{label}</span>
+                  <strong className={label === "Overlay" ? "display-number" : "stat-value"}>
+                    {value}
+                  </strong>
+                  <span
+                    className={
+                      note === "Ready" || note === "Receiving updates" || note === "On air"
+                        ? "tag"
+                        : "tag neutral"
+                    }
+                  >
+                    {note}
+                  </span>
+                </section>
+              ))}
             </div>
-            <div className="local-check">
+            <div className="overview-grid">
+              <SetupChecklist snapshot={snapshot} current={current} />
+              <OverlayUrlPanel
+                url={snapshot?.overlayUrl ?? url.href}
+                clients={snapshot?.overlayClients ?? 0}
+                current={current}
+              />
+            </div>
+            <SimulatorPanel
+              simulator={snapshot?.simulator}
+              demo={snapshot?.mode !== "live"}
+              compact
+            />
+            <button
+              className="text-button demo-options"
+              type="button"
+              onClick={() => setView("Demo")}
+            >
+              Demo options <span aria-hidden="true">↗</span>
+            </button>
+          </>
+        )}
+        {view === "Setup" && <ConnectionPanel auth={snapshot?.auth} />}
+        {view === "Demo" && (
+          <SimulatorPanel simulator={snapshot?.simulator} demo={snapshot?.mode !== "live"} />
+        )}
+        {view === "Emotes" && <EmoteCatalogPanel catalog={snapshot?.catalog} />}
+        {view === "Chat" && <ChatOutPanel output={snapshot?.chatOut} connected={connected} />}
+        {view === "Diagnostics" && (
+          <>
+            <EventSubPanel connection={snapshot?.eventsub} />
+            <details className="diagnostic-check">
+              <summary>Local connection</summary>
               <button
                 className="button button-secondary"
                 type="button"
-                onClick={checkLocalConnection}
-                disabled={checkStatus === "checking"}
+                onClick={() => void checkLocalConnection()}
               >
-                {checkStatus === "checking" ? "Checking…" : "Test local connection"}
+                Test local connection
               </button>
-              <p role="status">
-                {checkStatus === "failed"
-                  ? "Could not complete the check. Try again."
-                  : checkStatus === "success"
-                    ? "Local connection checked."
-                    : "Check that your local setup can save and send updates."}
-              </p>
-              {snapshot && (
-                <span className="saved-check-count">
-                  Successful checks: {snapshot.connectionChecks}
-                </span>
-              )}
-            </div>
-          </aside>
-        </section>
-
-        <SetupChecklist snapshot={snapshot} current={status === "connected"} />
-        <OverlayUrlPanel
-          url={overlayUrl}
-          clients={snapshot?.overlayClients ?? 0}
-          current={status === "connected"}
-        />
-        <SimulatorPanel simulator={snapshot?.simulator} demo={snapshot?.mode !== "live"} />
-        <ConnectionPanel auth={snapshot?.auth} />
-        <EventSubPanel connection={snapshot?.eventsub} />
-        <EmoteCatalogPanel catalog={snapshot?.catalog} />
-        <ChatOutPanel
-          output={snapshot?.chatOut}
-          connected={snapshot?.auth.broadcaster.connected ?? false}
-        />
-        <section className="build-next" aria-labelledby="next-title">
-          <div className="next-intro">
-            <h2 id="next-title">Next on the floor.</h2>
-            <p>One complete loop, built in order.</p>
-          </div>
-          <ol className="next-list">
-            <li>
-              <span className="step-index" aria-hidden="true">
-                01
-              </span>
-              <div>
-                <h3>Connect the channel</h3>
-                <p>Twitch login, chat events, and your emote catalog.</p>
-              </div>
-              <span className="planned-label">Ready</span>
-            </li>
-            <li>
-              <span className="step-index" aria-hidden="true">
-                02
-              </span>
-              <div>
-                <h3>Give it a dry run</h3>
-                <p>Simulated chat and channel events, with no Twitch account required.</p>
-              </div>
-              <span className="planned-label">Ready</span>
-            </li>
-            <li>
-              <span className="step-index" aria-hidden="true">
-                03
-              </span>
-              <div>
-                <h3>Open the market</h3>
-                <p>Listings, trades, and market moments on your stream.</p>
-              </div>
-              <span className="planned-label">Planned</span>
-            </li>
-          </ol>
-        </section>
+              <p role="status">{checkStatus}</p>
+            </details>
+          </>
+        )}
       </main>
-
-      <footer className="site-footer">
-        <span>Built for chat. Kept on your machine.</span>
-        <span>Play Coins only. No real money.</span>
-      </footer>
     </div>
   );
 }

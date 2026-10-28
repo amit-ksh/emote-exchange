@@ -210,10 +210,12 @@ One page, `/overlay`, a transparent 1920 x 1080 canvas made of widgets. Paramete
 
 The look is a trading floor in stream colors.
 
-- **Panels:** near-black glass (about 82% opaque), 1 px hairlines.
-- **Color:** green `#2BD47D` up, red `#FF5A5F` down, Twitch purple `#9146FF` as the only accent.
-- **Type:** numbers and tickers in JetBrains Mono with tabular figures, labels in Space Grotesk.
+- **Panels:** dark neutral glass (`rgba(34,34,34,.88)`), 1 px hairlines and soft 28 px corners.
+- **Color:** green `#2BD47D` up, red `#FF5A5F` down, lime `#e2ff1f` as the only brand accent. Lime never encodes Price direction.
+- **Type:** self-hosted Inter Tight with tabular figures; Doto 800 only for large display numerals. No monospace except URLs/timestamps.
 - **Emotes** are the logos.
+
+Art direction updated by the streamer's October 28 redesign request; [the detailed brief](../redesign-prompt.md) supersedes the original purple/font styling. Behavior and widget zones remain unchanged.
 
 **Readability rules**
 

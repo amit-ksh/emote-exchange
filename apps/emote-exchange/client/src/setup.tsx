@@ -45,11 +45,8 @@ export function SetupChecklist({
   return (
     <section className="overlay-setup setup-checklist" aria-labelledby="setup-title">
       <p className="eyebrow">STREAM SETUP</p>
-      <h2 id="setup-title">Ready for your channel.</h2>
-      <p className="copy-feedback">
-        The checklist updates automatically. An overlay connection confirms a browser is receiving
-        updates; check OBS yourself before recording.
-      </p>
+      <h2 id="setup-title">Setup checklist</h2>
+      <p className="copy-feedback">Demo mode works without Twitch.</p>
       <ol className="setup-steps">
         {steps.map((step, index) => (
           <li key={step.label}>
@@ -71,11 +68,7 @@ export function SetupChecklist({
       </ol>
       <p className="copy-feedback" role="status">
         {current && `${steps.filter((step) => step.done).length} of 3 setup steps complete. `}
-        {!current
-          ? "Waiting for current local updates. Checklist status will recover when the connection returns."
-          : snapshot?.simulatorRunning
-            ? "SIM running. Simulated bells do not change your Twitch stream status."
-            : "Live stream status comes from Twitch events. After startup or a connection gap it stays unknown until the next event."}
+        {!current && "Waiting for local updates."}
       </p>
     </section>
   );
@@ -104,9 +97,9 @@ export function OverlayUrlPanel({
       <div className="section-heading">
         <div>
           <p className="eyebrow">YOUR STREAM, YOUR EXCHANGE</p>
-          <h2 id="overlay-title">Make room in OBS.</h2>
+          <h2 id="overlay-title">Your overlay</h2>
         </div>
-        <a className="button button-primary" href={url} target="_blank" rel="noreferrer">
+        <a className="button button-secondary" href={url} target="_blank" rel="noreferrer">
           Open overlay <span aria-hidden="true">↗</span>
         </a>
       </div>
@@ -152,29 +145,21 @@ export function OverlayUrlPanel({
           </div>
         </dl>
       </div>
-      <ul className="obs-settings">
-        <li>
-          Turn off <strong>Shutdown source when not visible</strong>.
-        </li>
-        <li>
-          Turn off <strong>Refresh browser when scene becomes active</strong>.
-        </li>
-        <li>
-          Turn on <strong>Control audio via OBS</strong> when testing implemented sound cues.
-        </li>
-        <li>Check full and half scale over bright and dark scenes.</li>
-      </ul>
-      <div className="foundation-note">
-        <span className="note-marker" aria-hidden="true">
-          i
-        </span>
-        <p>
-          The overlay currently shows a foundation label. Market widgets arrive in Sprint 2.{" "}
-          <a href="/setup-guide" target="_blank" rel="noreferrer">
-            Read the setup guide ↗
-          </a>
-        </p>
-      </div>
+      <details>
+        <summary>OBS settings</summary>
+        <ul className="obs-settings">
+          <li>
+            Turn off <strong>Shutdown source when not visible</strong>.
+          </li>
+          <li>
+            Turn off <strong>Refresh browser when scene becomes active</strong>.
+          </li>
+          <li>
+            Turn on <strong>Control audio via OBS</strong> when testing implemented sound cues.
+          </li>
+          <li>Check full and half scale over bright and dark scenes.</li>
+        </ul>
+      </details>
     </section>
   );
 }

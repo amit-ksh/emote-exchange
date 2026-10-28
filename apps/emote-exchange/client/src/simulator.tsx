@@ -122,9 +122,11 @@ export function readSimulator(value: unknown): SimulatorPublicState | null {
 export function SimulatorPanel({
   simulator,
   demo,
+  compact = false,
 }: {
   simulator?: SimulatorPublicState;
   demo: boolean;
+  compact?: boolean;
 }) {
   const [draft, setDraft] = useState<SimConfig | null>(null);
   const [busy, setBusy] = useState(false);
@@ -169,20 +171,20 @@ export function SimulatorPanel({
     }
   }
   return (
-    <section className="overlay-setup" aria-labelledby="simulator-title">
+    <section
+      className={`overlay-setup simulator-panel ${compact ? "compact" : ""}`}
+      aria-labelledby="simulator-title"
+    >
       <div className="section-heading">
         <div>
           <p className="eyebrow">A REHEARSAL FOR CHAT</p>
-          <h2 id="simulator-title">Give it a dry run.</h2>
+          <h2 id="simulator-title">Demo</h2>
         </div>
         <span className={simulator?.running ? "sim-badge" : "local-label"} role="status">
           {simulator?.running ? "SIM · Running" : "Simulator stopped"}
         </span>
       </div>
-      <p>
-        Generate chat and channel events with the original demo emotes. Market prices and trade
-        results arrive in the next build.
-      </p>
+      <p>Simulated chat only. Your Twitch stream is not affected.</p>
       <form
         onSubmit={(event) => {
           event.preventDefault();
@@ -238,6 +240,10 @@ export function SimulatorPanel({
               }
             />
           </label>
+        </div>
+        <p className="copy-feedback">{selected?.description}</p>
+        <details className="sim-advanced">
+          <summary>Advanced</summary>{" "}
           <label className="sim-field">
             Seed
             <input
@@ -250,42 +256,41 @@ export function SimulatorPanel({
               disabled={editingDisabled}
               onChange={(event) => setDraft({ ...config, seed: event.currentTarget.valueAsNumber })}
             />
-          </label>
-        </div>
-        <p className="copy-feedback">{selected?.description}</p>
-        <fieldset className="sim-personas" disabled={editingDisabled}>
-          <legend>Persona weights</legend>
-          {(["plain", "emote", "follow", "raid"] as const).map((persona) => (
-            <label className="sim-field" key={persona}>
-              {
+          </label>{" "}
+          <fieldset className="sim-personas" disabled={editingDisabled}>
+            <legend>Persona weights</legend>
+            {(["plain", "emote", "follow", "raid"] as const).map((persona) => (
+              <label className="sim-field" key={persona}>
                 {
-                  plain: "Plain chat",
-                  emote: "Emote spam",
-                  follow: "Follow generator",
-                  raid: "Raid generator",
-                }[persona]
-              }
-              <input
-                type="number"
-                min="0"
-                max="100"
-                step="any"
-                required
-                value={config.mix[persona]}
-                onChange={(event) =>
-                  setDraft({
-                    ...config,
-                    mix: { ...config.mix, [persona]: event.currentTarget.valueAsNumber },
-                  })
+                  {
+                    plain: "Plain chat",
+                    emote: "Emote spam",
+                    follow: "Follow generator",
+                    raid: "Raid generator",
+                  }[persona]
                 }
-              />
-            </label>
-          ))}
-        </fieldset>
-        <p className="copy-feedback">
-          Weights are relative and must total more than zero. Follow and raid personas add channel
-          events alongside chat messages. Stop the simulation to change settings.
-        </p>
+                <input
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="any"
+                  required
+                  value={config.mix[persona]}
+                  onChange={(event) =>
+                    setDraft({
+                      ...config,
+                      mix: { ...config.mix, [persona]: event.currentTarget.valueAsNumber },
+                    })
+                  }
+                />
+              </label>
+            ))}
+          </fieldset>
+          <p className="copy-feedback">
+            Weights are relative and must total more than zero. Follow and raid personas add channel
+            events alongside chat messages. Stop the simulation to change settings.
+          </p>
+        </details>{" "}
         <div className="chat-controls">
           <button
             className="button button-primary sim-start"
@@ -320,6 +325,8 @@ export function SimulatorPanel({
           <dd>{Math.floor((simulator?.elapsedMs ?? 0) / 1000)}s</dd>
         </div>
       </dl>
+      <h3 className="trigger-title">Trigger an event</h3>
+      <p className="sim-note">Simulated bells do not change your Twitch stream status.</p>
       <div className="sim-injections">
         <label className="sim-field">
           Raid viewers
