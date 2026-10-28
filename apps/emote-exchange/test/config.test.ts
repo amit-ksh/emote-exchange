@@ -1,11 +1,16 @@
 import assert from "node:assert/strict";
+import { resolve } from "node:path";
 import test from "node:test";
+import { fileURLToPath } from "node:url";
 import { readConfig } from "../src/config.ts";
+
+const appDirectory = fileURLToPath(new URL("../", import.meta.url));
 
 test("configuration defaults to the documented local origin", () => {
   assert.deepEqual(readConfig({}), {
     port: 4100,
     publicOrigin: "http://localhost:4100",
+    dataDir: resolve(appDirectory, "data"),
   });
 });
 
@@ -13,8 +18,18 @@ test("configuration accepts a different port and its exact loopback origin", () 
   assert.deepEqual(readConfig({ PORT: "4111", PUBLIC_ORIGIN: "http://127.0.0.1:4111" }), {
     port: 4111,
     publicOrigin: "http://127.0.0.1:4111",
+    dataDir: resolve(appDirectory, "data"),
   });
   assert.equal(readConfig({ PORT: "4111" }).publicOrigin, "http://localhost:4111");
+});
+
+test("relative DATA_DIR is resolved against the app directory", () => {
+  assert.equal(
+    readConfig({ DATA_DIR: "./custom-data" }).dataDir,
+    resolve(appDirectory, "custom-data"),
+  );
+  assert.throws(() => readConfig({ DATA_DIR: "" }), /DATA_DIR/);
+  assert.throws(() => readConfig({ DATA_DIR: "bad\0path" }), /DATA_DIR/);
 });
 
 test("configuration rejects invalid ports and nonlocal or mismatched public origins", () => {

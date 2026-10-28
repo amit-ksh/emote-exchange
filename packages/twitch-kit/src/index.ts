@@ -1,16 +1,21 @@
 import { Hono } from "hono";
 import { bodyLimit } from "hono/body-limit";
+import type { OverlayBus } from "./bus.ts";
 import { isAllowedHost, isAllowedOrigin } from "./security.ts";
 
+export type { OverlayBus, PublicMoment } from "./bus.ts";
+export { createOverlayBus } from "./bus.ts";
 export { startHttpServer } from "./server.ts";
+export { openStore } from "./store/index.ts";
 
-export interface HttpAppOptions<Snapshot> {
+export interface HttpAppOptions<Display extends object> {
   port: number;
-  getSnapshot: () => Snapshot;
+  bus: Pick<OverlayBus<Display>, "snapshot" | "connect">;
 }
 
-export function createHttpApp<Snapshot>(options: HttpAppOptions<Snapshot>) {
+export function createHttpApp<Display extends object>(options: HttpAppOptions<Display>) {
   const app = new Hono();
+  app.onError((_, context) => context.json({ error: "Unable to complete the local action." }, 500));
   app.use("*", async (context, next) => {
     if (!isAllowedHost(context.req.header("Host"), options.port)) {
       return context.json({ error: "Forbidden" }, 403);
@@ -37,7 +42,7 @@ export function createHttpApp<Snapshot>(options: HttpAppOptions<Snapshot>) {
   );
   app.get("/healthz", (context) => context.json({ ok: true }));
   app.get("/api/snapshot", (context) =>
-    context.body(JSON.stringify(options.getSnapshot()), 200, {
+    context.body(JSON.stringify(options.bus.snapshot()), 200, {
       "Content-Type": "application/json",
       "Cache-Control": "no-store",
     }),
@@ -51,43 +56,7 @@ export function createHttpApp<Snapshot>(options: HttpAppOptions<Snapshot>) {
       }),
   );
   app.get("/events", (context) => {
-    const signal = context.req.raw.signal;
-    const encoder = new TextEncoder();
-    let cancelStream: (() => void) | undefined;
-    const body = new ReadableStream<Uint8Array>({
-      start(controller) {
-        let closed = false;
-        const ping = setInterval(() => {
-          if (controller.desiredSize !== null && controller.desiredSize <= 0) {
-            cleanup(true);
-            return;
-          }
-          controller.enqueue(encoder.encode(": ping\n\n"));
-        }, 15_000);
-        ping.unref();
-        const cleanup = (close: boolean) => {
-          if (closed) return;
-          closed = true;
-          clearInterval(ping);
-          signal.removeEventListener("abort", onAbort);
-          if (close) controller.close();
-        };
-        const onAbort = () => cleanup(true);
-        cancelStream = () => cleanup(false);
-        signal.addEventListener("abort", onAbort, { once: true });
-        if (signal.aborted) {
-          cleanup(true);
-          return;
-        }
-        controller.enqueue(
-          encoder.encode(`event: snapshot\ndata: ${JSON.stringify(options.getSnapshot())}\n\n`),
-        );
-      },
-      cancel() {
-        cancelStream?.();
-      },
-    });
-    return new Response(body, {
+    return new Response(options.bus.connect(context.req.raw.signal), {
       headers: {
         "Content-Type": "text/event-stream",
         "Cache-Control": "no-store",

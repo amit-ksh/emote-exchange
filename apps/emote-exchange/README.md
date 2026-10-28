@@ -1,6 +1,6 @@
 # Emote Exchange
 
-A local play-money emote market for Twitch, displayed through an OBS browser source. The current build is the Sprint 0 foundation: dashboard, transparent overlay, HTTP guards and a public SSE snapshot. Twitch login, the Simulator, market rules and persistence are planned in [the implementation plan](../../docs/implementation-plan.md).
+A local play-money emote market for Twitch, displayed through an OBS browser source. The current build includes the local foundation plus K1: SQLite storage, validated settings, guarded actions and bounded SSE updates. Twitch login, the Simulator and market rules are planned in [the implementation plan](../../docs/implementation-plan.md).
 
 ## Run the foundation
 
@@ -21,6 +21,8 @@ pnpm start:exchange
 ```
 
 Keep the terminal running while using the app. Stop the development process before starting production on the same port.
+
+Use **Test local connection** on the dashboard to verify a guarded action, a saved setting and a live SSE update. Successful checks survive restart. Local SQLite data lives in `apps/emote-exchange/data/emote-exchange.sqlite` by default; `DATA_DIR` overrides it, with relative paths resolved from the app directory. Data is git-ignored.
 
 ## OBS
 

@@ -1,13 +1,26 @@
 import assert from "node:assert/strict";
 import { getEventListeners } from "node:events";
 import test from "node:test";
-import { createHttpApp } from "../src/index.ts";
+import { createHttpApp, createOverlayBus } from "../src/index.ts";
 
 const port = 4100;
-const snapshot = { v: 1, seq: 0, label: "Foundation" };
+const snapshot = { v: 1, seq: 0, label: "Foundation", moments: [] };
+
+function createTestApp() {
+  const bus = createOverlayBus({
+    initial: { label: "Foundation" },
+    now: Date.now,
+    schedule(callback, delayMs) {
+      const timer = setTimeout(callback, delayMs);
+      timer.unref();
+      return () => clearTimeout(timer);
+    },
+  });
+  return createHttpApp({ port, bus });
+}
 
 test("health reports a running local server", async () => {
-  const app = createHttpApp({ port, getSnapshot: () => snapshot });
+  const app = createTestApp();
   const response = await app.request("http://localhost:4100/healthz", {
     headers: { Host: "localhost:4100" },
   });
@@ -16,7 +29,7 @@ test("health reports a running local server", async () => {
 });
 
 test("every route rejects missing or unrelated Host values", async () => {
-  const app = createHttpApp({ port, getSnapshot: () => snapshot });
+  const app = createTestApp();
   for (const path of ["/healthz", "/api/snapshot", "/events", "/", "/assets/missing.js"]) {
     for (const host of [undefined, "example.com:4100", "localhost:4101", "localhost.evil:4100"]) {
       const response = await app.request(`http://localhost:4100${path}`, {
@@ -32,7 +45,7 @@ test("every route rejects missing or unrelated Host values", async () => {
 });
 
 test("mutations require an exact loopback Origin and X-CTA for every method", async () => {
-  const app = createHttpApp({ port, getSnapshot: () => snapshot });
+  const app = createTestApp();
   app.on(["POST", "PUT", "PATCH", "DELETE"], "/api/check", (context) =>
     context.json({ accepted: true }),
   );
@@ -71,7 +84,7 @@ test("mutations require an exact loopback Origin and X-CTA for every method", as
 });
 
 test("snapshot exposes the supplied display projection without caching or CORS", async () => {
-  const app = createHttpApp({ port, getSnapshot: () => snapshot });
+  const app = createTestApp();
   const response = await app.request("http://localhost:4100/api/snapshot", {
     headers: { Host: "localhost:4100" },
   });
@@ -82,7 +95,7 @@ test("snapshot exposes the supplied display projection without caching or CORS",
 });
 
 test("SSE starts with a snapshot and abort closes the stream and releases its listener", async () => {
-  const app = createHttpApp({ port, getSnapshot: () => snapshot });
+  const app = createTestApp();
   const abort = new AbortController();
   const request = new Request("http://localhost:4100/events?client=overlay", {
     headers: { Host: "localhost:4100" },
@@ -96,17 +109,16 @@ test("SSE starts with a snapshot and abort closes the stream and releases its li
   assert.ok(response.body);
   const reader = response.body.getReader();
   const first = await reader.read();
-  assert.equal(
-    new TextDecoder().decode(first.value),
-    `event: snapshot\ndata: ${JSON.stringify(snapshot)}\n\n`,
-  );
+  const frame = new TextDecoder().decode(first.value);
+  assert.match(frame, /^event: snapshot\ndata: .*\n\n$/);
+  assert.deepEqual(JSON.parse(frame.split("\n")[1].slice(6)), snapshot);
   abort.abort();
   assert.equal((await reader.read()).done, true);
   assert.equal(getEventListeners(request.signal, "abort").length, originalListeners);
 });
 
 test("guarded actions reject a body larger than 64 KiB", async () => {
-  const app = createHttpApp({ port, getSnapshot: () => snapshot });
+  const app = createTestApp();
   app.post("/api/check", async (context) => {
     await context.req.text();
     return context.json({ accepted: true });

@@ -1,6 +1,10 @@
+import { resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+
 export interface ExchangeConfig {
   port: number;
   publicOrigin: string;
+  dataDir: string;
 }
 
 export function readConfig(environment: Record<string, string | undefined>): ExchangeConfig {
@@ -13,5 +17,10 @@ export function readConfig(environment: Record<string, string | undefined>): Exc
   if (publicOrigin !== `http://localhost:${port}` && publicOrigin !== `http://127.0.0.1:${port}`) {
     throw new Error("PUBLIC_ORIGIN must be an exact HTTP loopback origin at PORT.");
   }
-  return { port, publicOrigin };
+  const dataPath = environment.DATA_DIR ?? "./data";
+  if (!dataPath.trim() || dataPath.includes("\0")) {
+    throw new Error("DATA_DIR must be a nonempty local path.");
+  }
+  const dataDir = resolve(fileURLToPath(new URL("../", import.meta.url)), dataPath);
+  return { port, publicOrigin, dataDir };
 }

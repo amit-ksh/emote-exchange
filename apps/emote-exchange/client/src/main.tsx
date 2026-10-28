@@ -16,7 +16,10 @@ function readSnapshot(value: unknown): FoundationSnapshot | null {
     candidate.mode !== "demo" ||
     candidate.phase !== "foundation" ||
     candidate.simulatorRunning !== false ||
-    typeof candidate.overlayUrl !== "string"
+    typeof candidate.overlayUrl !== "string" ||
+    !Number.isSafeInteger(candidate.connectionChecks) ||
+    (candidate.connectionChecks as number) < 0 ||
+    !Array.isArray(candidate.moments)
   ) {
     return null;
   }
@@ -45,6 +48,14 @@ function readSnapshot(value: unknown): FoundationSnapshot | null {
     phase: "foundation",
     simulatorRunning: false,
     overlayUrl: candidate.overlayUrl,
+    connectionChecks: candidate.connectionChecks as number,
+    moments: candidate.moments.filter(
+      (moment): moment is FoundationSnapshot["moments"][number] =>
+        typeof moment === "object" &&
+        moment !== null &&
+        typeof moment.id === "string" &&
+        Number.isFinite(moment.at),
+    ),
   };
 }
 
@@ -55,6 +66,7 @@ function useFoundation(client: "dashboard" | "overlay") {
   useEffect(() => {
     const controller = new AbortController();
     let receivedStreamSnapshot = false;
+    let lastSequence = -1;
     const events = new EventSource(`/events?client=${client}`);
 
     const receiveSnapshot = (event: MessageEvent<string>) => {
@@ -64,6 +76,8 @@ function useFoundation(client: "dashboard" | "overlay") {
           setStatus("reconnecting");
           return;
         }
+        if (event.type === "delta" && next.seq <= lastSequence) return;
+        lastSequence = next.seq;
         receivedStreamSnapshot = true;
         setSnapshot(next);
         setStatus("connected");
@@ -73,6 +87,7 @@ function useFoundation(client: "dashboard" | "overlay") {
     };
 
     events.addEventListener("snapshot", receiveSnapshot);
+    events.addEventListener("delta", receiveSnapshot);
     events.onerror = () => setStatus("reconnecting");
 
     void fetch("/api/snapshot", { signal: controller.signal })
@@ -91,6 +106,7 @@ function useFoundation(client: "dashboard" | "overlay") {
     return () => {
       controller.abort();
       events.removeEventListener("snapshot", receiveSnapshot);
+      events.removeEventListener("delta", receiveSnapshot);
       events.close();
     };
   }, [client]);
@@ -116,6 +132,9 @@ function measureOverlayScale() {
 function Dashboard() {
   const { snapshot, status } = useFoundation("dashboard");
   const [copyStatus, setCopyStatus] = useState<"idle" | "copied" | "failed">("idle");
+  const [checkStatus, setCheckStatus] = useState<"idle" | "checking" | "success" | "failed">(
+    "idle",
+  );
   const fallbackOverlayUrl = new URL("/overlay", window.location.origin);
   fallbackOverlayUrl.hostname = "127.0.0.1";
   const overlayUrl = snapshot?.overlayUrl ?? fallbackOverlayUrl.href;
@@ -131,6 +150,20 @@ function Dashboard() {
       setCopyStatus("copied");
     } catch {
       setCopyStatus("failed");
+    }
+  }
+
+  async function checkLocalConnection() {
+    setCheckStatus("checking");
+    try {
+      const response = await fetch("/api/setup/check", {
+        method: "POST",
+        headers: { "X-CTA": "1" },
+      });
+      if (!response.ok) throw new Error("Local check failed");
+      setCheckStatus("success");
+    } catch {
+      setCheckStatus("failed");
     }
   }
 
@@ -177,6 +210,28 @@ function Dashboard() {
               <span className="connection-glyph" aria-hidden="true">
                 {status === "connected" ? "✓" : "↻"}
               </span>
+            </div>
+            <div className="local-check">
+              <button
+                className="button button-secondary"
+                type="button"
+                onClick={checkLocalConnection}
+                disabled={checkStatus === "checking"}
+              >
+                {checkStatus === "checking" ? "Checking…" : "Test local connection"}
+              </button>
+              <p role="status">
+                {checkStatus === "failed"
+                  ? "Could not complete the check. Try again."
+                  : checkStatus === "success"
+                    ? "Local connection checked."
+                    : "Check that your local setup can save and send updates."}
+              </p>
+              {snapshot && (
+                <span className="saved-check-count">
+                  Successful checks: {snapshot.connectionChecks}
+                </span>
+              )}
             </div>
           </aside>
         </section>

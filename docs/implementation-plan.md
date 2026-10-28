@@ -10,6 +10,8 @@ Keep `apps/emote-exchange` for market rules, runtime wiring and React screens. K
 
 ## Technology decision
 
+UI direction: use the local, git-ignored `references/` images as inspiration, with the builder choosing the final composition. Carry their soft panels, clear numerical hierarchy and restrained color accents into the full dashboard. Preserve the overlay's contrast and legibility over stream footage. The foundation screens are temporary; E4/E5 own the full product design.
+
 | Concern | Choice | Reason |
 |---|---|---|
 | Runtime | Node 24 LTS, minimum 24.12 | Stable native TypeScript stripping; built-in fetch, WebSocket, tests and SQLite |

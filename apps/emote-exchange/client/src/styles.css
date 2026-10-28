@@ -344,6 +344,24 @@ p {
   gap: 72px;
   padding: 52px 0;
 }
+
+.local-check {
+  margin-top: 20px;
+}
+.local-check p {
+  margin-top: 10px;
+  font-size: 12px;
+}
+.saved-check-count {
+  display: block;
+  margin-top: 6px;
+  color: var(--muted);
+  font: 400 11px / 1.7 var(--mono);
+}
+.button:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
 .next-intro {
   padding-top: 12px;
 }

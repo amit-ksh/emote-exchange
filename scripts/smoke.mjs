@@ -1,9 +1,12 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { once } from "node:events";
+import { mkdtempSync, rmSync } from "node:fs";
 import { request } from "node:http";
 import { createServer } from "node:net";
-import { setTimeout } from "node:timers/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { setTimeout as delay } from "node:timers/promises";
 import { fileURLToPath } from "node:url";
 
 // Exercise the built app with its actual Node entrypoint and workspace imports.
@@ -15,9 +18,16 @@ assert.ok(address && typeof address !== "string");
 const port = address.port;
 await new Promise((resolve) => reservation.close(resolve));
 const origin = `http://127.0.0.1:${port}`;
+const dataDir = mkdtempSync(join(tmpdir(), "emote-exchange-smoke-"));
 const child = spawn(process.execPath, ["src/server.ts"], {
   cwd: fileURLToPath(new URL("../apps/emote-exchange/", import.meta.url)),
-  env: { ...process.env, PORT: String(port), PUBLIC_ORIGIN: origin, NODE_ENV: "production" },
+  env: {
+    ...process.env,
+    PORT: String(port),
+    PUBLIC_ORIGIN: origin,
+    DATA_DIR: dataDir,
+    NODE_ENV: "production",
+  },
   stdio: "ignore",
 });
 let spawnError;
@@ -36,7 +46,7 @@ try {
       ready = true;
       break;
     } catch {
-      await setTimeout(100);
+      await delay(100);
     }
   }
   assert.ok(ready, "Production server must become ready within 10 seconds.");
@@ -62,6 +72,8 @@ try {
     phase: "foundation",
     simulatorRunning: false,
     overlayUrl: `${origin}/overlay`,
+    connectionChecks: 0,
+    moments: [],
   });
   // Fetch normalizes Host and paths; use raw HTTP for malformed-request checks.
   function rawStatus(path, host) {
@@ -94,16 +106,37 @@ try {
     const reader = events.body.getReader();
     const initial = await reader.read();
     assert.match(new TextDecoder().decode(initial.value), /event: snapshot\ndata:/);
+    const checked = await fetch(`${origin}/api/setup/check`, {
+      method: "POST",
+      headers: { Origin: origin, "X-CTA": "1" },
+    });
+    assert.equal(checked.status, 200);
+    let delta = "";
+    const deadline = setTimeout(() => controller.abort(), 5000);
+    try {
+      while (!delta.includes("event: delta")) {
+        const next = await reader.read();
+        assert.equal(next.done, false);
+        delta += new TextDecoder().decode(next.value);
+      }
+      assert.match(delta, /"connectionChecks":1/);
+      assert.match(delta, /"seq":1/);
+    } finally {
+      clearTimeout(deadline);
+    }
     await reader.cancel();
   } finally {
     controller.abort();
   }
-  console.log("Production smoke passed: dashboard, overlay, assets, snapshot, SSE and guards.");
+  console.log(
+    "Production smoke passed: dashboard, overlay, assets, persisted action, SSE deltas and guards.",
+  );
 } finally {
   if (child.exitCode === null && child.signalCode === null) {
     const exited = once(child, "exit");
     child.kill();
-    await Promise.race([exited, setTimeout(3000)]);
+    await Promise.race([exited, delay(3000)]);
     if (child.exitCode === null && child.signalCode === null) child.kill("SIGKILL");
   }
+  rmSync(dataDir, { recursive: true, force: true, maxRetries: 3, retryDelay: 100 });
 }

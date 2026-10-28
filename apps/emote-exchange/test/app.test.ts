@@ -1,9 +1,14 @@
 import assert from "node:assert/strict";
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import test from "node:test";
-import { createExchangeApp } from "../src/app.ts";
+import { createExchangeRuntime } from "../src/app.ts";
 
-test("Exchange exposes an honest foundation-only display snapshot", async () => {
-  const app = createExchangeApp();
+test("Exchange exposes an honest foundation-only display snapshot", async (context) => {
+  const runtime = createExchangeRuntime();
+  context.after(() => runtime.close());
+  const { app } = runtime;
   const response = await app.request("http://localhost:4100/api/snapshot", {
     headers: { Host: "localhost:4100" },
   });
@@ -16,5 +21,51 @@ test("Exchange exposes an honest foundation-only display snapshot", async () => 
     phase: "foundation",
     simulatorRunning: false,
     overlayUrl: "http://127.0.0.1:4100/overlay",
+    connectionChecks: 0,
+    moments: [],
   });
+});
+
+test("a guarded local connection check is published and survives restart", async (context) => {
+  const directory = mkdtempSync(join(tmpdir(), "emote-exchange-k1-"));
+  context.after(() => rmSync(directory, { recursive: true, force: true }));
+  const filename = join(directory, "emote-exchange.sqlite");
+  const runtime = createExchangeRuntime({ filename, now: () => 10_000 });
+  try {
+    const denied = await runtime.app.request("http://localhost:4100/api/setup/check", {
+      method: "POST",
+      headers: { Host: "localhost:4100" },
+    });
+    assert.equal(denied.status, 403);
+    const response = await runtime.app.request("http://localhost:4100/api/setup/check", {
+      method: "POST",
+      headers: { Host: "localhost:4100", Origin: "http://localhost:4100", "X-CTA": "1" },
+    });
+    assert.equal(response.status, 200);
+    assert.deepEqual(await response.json(), { ok: true });
+    const snapshot = await (
+      await runtime.app.request("http://localhost:4100/api/snapshot", {
+        headers: { Host: "localhost:4100" },
+      })
+    ).json();
+    assert.equal(snapshot.connectionChecks, 1);
+    assert.equal(snapshot.seq, 1);
+    assert.deepEqual(snapshot.moments, [
+      { id: "connection-check:1", at: 10_000, kind: "connection-check" },
+    ]);
+  } finally {
+    runtime.close();
+  }
+  const restored = createExchangeRuntime({ filename });
+  try {
+    const snapshot = await (
+      await restored.app.request("http://localhost:4100/api/snapshot", {
+        headers: { Host: "localhost:4100" },
+      })
+    ).json();
+    assert.equal(snapshot.connectionChecks, 1);
+    assert.deepEqual(snapshot.moments, []);
+  } finally {
+    restored.close();
+  }
 });

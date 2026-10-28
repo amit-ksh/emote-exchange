@@ -1,9 +1,16 @@
-export interface FoundationSnapshot {
-  v: 1;
-  seq: number;
+import type { PublicMoment } from "@emote-exchange/twitch-kit";
+
+export interface FoundationDisplay {
   app: "Emote Exchange";
   mode: "demo";
   phase: "foundation";
   simulatorRunning: false;
   overlayUrl: string;
+  connectionChecks: number;
+}
+
+export interface FoundationSnapshot extends FoundationDisplay {
+  v: 1;
+  seq: number;
+  moments: readonly PublicMoment[];
 }

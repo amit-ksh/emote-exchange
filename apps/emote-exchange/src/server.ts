@@ -1,7 +1,8 @@
+import { join } from "node:path";
 import { loadEnvFile } from "node:process";
 import { fileURLToPath } from "node:url";
 import { startHttpServer } from "@emote-exchange/twitch-kit";
-import { createExchangeApp } from "./app.ts";
+import { createExchangeRuntime } from "./app.ts";
 import { readConfig } from "./config.ts";
 
 try {
@@ -11,19 +12,29 @@ try {
 }
 
 try {
-  const { port } = readConfig(process.env);
-  const running = await startHttpServer({
-    app: createExchangeApp({ port }),
-    port,
-    clientRoot: fileURLToPath(new URL("../client/", import.meta.url)),
-    clientDist: fileURLToPath(new URL("../dist/client/", import.meta.url)),
-    development: process.argv.includes("--dev") || process.env.NODE_ENV === "development",
-  });
+  const { port, dataDir } = readConfig(process.env);
+  const runtime = createExchangeRuntime({ port, filename: join(dataDir, "emote-exchange.sqlite") });
+  let running: Awaited<ReturnType<typeof startHttpServer>>;
+  try {
+    running = await startHttpServer({
+      app: runtime.app,
+      port,
+      clientRoot: fileURLToPath(new URL("../client/", import.meta.url)),
+      clientDist: fileURLToPath(new URL("../dist/client/", import.meta.url)),
+      development: process.argv.includes("--dev") || process.env.NODE_ENV === "development",
+    });
+  } catch (error) {
+    runtime.close();
+    throw error;
+  }
   console.log(`Emote Exchange foundation · Demo mode · http://localhost:${port}`);
   console.log(`OBS overlay: http://127.0.0.1:${port}/overlay`);
   for (const signal of ["SIGINT", "SIGTERM"] as const) {
     process.once(signal, () => {
-      void running.close().then(() => process.exit(0));
+      void running.close().then(() => {
+        runtime.close();
+        process.exit(0);
+      });
     });
   }
 } catch (error) {
