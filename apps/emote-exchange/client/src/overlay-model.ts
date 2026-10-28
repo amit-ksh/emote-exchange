@@ -19,6 +19,7 @@ const kinds = new Set([
   "BELL",
   "PAUSED",
   "TOP",
+  "GREETING",
 ]);
 function object(value: unknown): Record<string, unknown> {
   if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error();
@@ -96,6 +97,7 @@ function session(value: unknown): MarketSession | null {
   const row = object(value);
   return {
     id: text(row.id, 256),
+    streamNo: integer(row.streamNo),
     openedAt: integer(row.openedAt),
     closedAt: row.closedAt === null ? null : integer(row.closedAt),
     summary: summary(row.summary),
@@ -117,6 +119,7 @@ function moment(value: unknown): MarketMoment {
   if (row.price !== undefined) result.price = number(row.price, 1);
   if (row.shares !== undefined) result.shares = integer(row.shares, 1);
   if (row.coins !== undefined) result.coins = integer(row.coins, 0, 1_000_000_000);
+  if (row.streak !== undefined) result.streak = integer(row.streak, 1);
   if (row.viewers !== undefined) result.viewers = integer(row.viewers);
   if (row.paused !== undefined) result.paused = boolean(row.paused);
   if (row.side !== undefined) {
@@ -181,6 +184,7 @@ export function readOverlayMarket(value: unknown): OverlayMarket | null {
           throw new Error();
         return {
           userId: text(trader.userId, 128),
+          streak: trader.streak === null ? null : integer(trader.streak, 1),
           name: text(trader.name),
           login: text(trader.login),
           color: trader.color,

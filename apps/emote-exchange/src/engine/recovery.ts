@@ -28,6 +28,8 @@ function checkpointData(state: MarketState) {
     paused: state.paused,
     raidUntil: state.raidUntil,
     sessionId: state.session?.id ?? null,
+    streamNo: state.streamNo,
+    streamLastTickAt: state.streamLastTickAt,
     pending: [...state.pending],
     repeats: [...state.repeats].map(([ticker, users]) => [ticker, [...users]] as const),
     cooldowns: [...state.cooldowns],
@@ -156,7 +158,15 @@ export function restoreMarket(
       rows.sessions.find((session) => session.id === saved.sessionId) ?? null,
     );
     if (saved.sessionId !== null && state.session === null) throw new Error();
+    state.streamNo = saved.streamNo ?? state.session?.streamNo ?? 0;
+    integer(state.streamNo);
+    state.streamLastTickAt = saved.streamLastTickAt ?? saved.lastTickAt;
+    integer(state.streamLastTickAt, 0, saved.at);
+    if (state.session && state.session.streamNo !== state.streamNo) throw new Error();
     for (const trader of rows.traders) {
+      integer(trader.greetingStreak);
+      if (trader.lastGreetingStreamNo !== null)
+        integer(trader.lastGreetingStreamNo, 0, state.streamNo);
       if (
         trader.sessionOpenWorth !== null &&
         (typeof trader.sessionOpenWorth !== "string" || !/^\d{1,64}$/.test(trader.sessionOpenWorth))

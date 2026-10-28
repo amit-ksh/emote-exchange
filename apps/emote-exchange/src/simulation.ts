@@ -5,6 +5,23 @@ const emoteAt = (emotes: readonly { name: string }[], index: number) =>
   emotes[index % emotes.length].name;
 export const exchangeScenarios: SimScenario[] = [
   {
+    id: "greeting-streak",
+    label: "Greeting streak",
+    description:
+      "12 chatters across four Streams. Ten greet every time; two skip the third Stream.",
+    defaults: { rate: 1, chatters: 12, mix: { plain: 100, emote: 0, follow: 0, raid: 0 } },
+    durationMs: 48_000,
+    initial: [{ type: "online" }],
+    finish: [{ type: "offline" }],
+    beforeMessage: ({ index }) =>
+      index > 0 && index % 12 === 0 ? [{ type: "offline" }, { type: "online" }] : [],
+    message: ({ index }) => ({
+      type: "chat",
+      chatter: index % 12,
+      text: index === 24 || index === 25 ? "Taking a quiet lap." : "!greetings good morning",
+    }),
+  },
+  {
     id: "opening-day",
     label: "Opening day",
     description: "12 chatters, six original emotes and light trading commands.",

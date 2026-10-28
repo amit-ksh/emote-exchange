@@ -32,6 +32,7 @@ export interface SimScenario {
   durationMs?: number;
   finish?: readonly SimAction[];
   message?: (context: SimContext) => Extract<SimAction, { type: "chat" }>;
+  beforeMessage?: (context: SimContext) => readonly SimAction[];
 }
 export const freePlay: SimScenario = {
   id: "free-play",
@@ -321,6 +322,15 @@ export function stepSimulator(
       if (persona === "raid")
         emit({ type: "raid", chatter, viewers: 1 + Math.floor(random() * 100) }, at);
       let message: Extract<SimAction, { type: "chat" }>;
+      for (const action of scenario.beforeMessage?.({
+        index: state.messageIndex,
+        elapsedMs: at - state.epoch,
+        persona,
+        chatters: state.config.chatters,
+        emotes: state.emotes,
+        random,
+      }) ?? [])
+        emit(action, at);
       if (scenario.message)
         message = scenario.message({
           index: state.messageIndex,

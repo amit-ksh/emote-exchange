@@ -12,6 +12,8 @@ export function touchTrader(
 ): Trader {
   const existing = state.traders.get(user.id);
   const trader: Trader = {
+    greetingStreak: existing?.greetingStreak ?? 0,
+    lastGreetingStreamNo: existing?.lastGreetingStreamNo ?? null,
     id: user.id,
     login: user.login,
     displayName: user.displayName,

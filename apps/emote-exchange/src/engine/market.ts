@@ -2,6 +2,7 @@ import type { ChatEvent, Emote, Say } from "@emote-exchange/twitch-kit";
 import type { AccountChanges } from "./accounts.ts";
 import { accountChanges, accountWrites, settleDelist } from "./accounts.ts";
 import { marketCommand } from "./commands.ts";
+import { greeting } from "./greetings.ts";
 import { priceEvents } from "./price-events.ts";
 import { advanceRewards, followOrRaid, observeMessage, touchTrader } from "./rewards.ts";
 import { bell } from "./sessions.ts";
@@ -10,6 +11,8 @@ import { marketSettings } from "./settings.ts";
 import { trade } from "./trading.ts";
 
 export interface Trader {
+  greetingStreak: number;
+  lastGreetingStreamNo: number | null;
   id: string;
   login: string;
   displayName: string;
@@ -43,7 +46,7 @@ export interface Credit {
   at: number;
   origin: ChatEvent["origin"];
   userId: string;
-  kind: "delist" | "follow" | "visa" | "stipend";
+  kind: "delist" | "follow" | "visa" | "stipend" | "greeting";
   coins: number;
 }
 export interface SessionSummary {
@@ -52,6 +55,7 @@ export interface SessionSummary {
   richest: { userId: string; name: string; netWorth: number; capped: boolean } | null;
 }
 export interface MarketSession {
+  streamNo: number;
   id: string;
   openedAt: number;
   closedAt: number | null;
@@ -107,6 +111,8 @@ interface PendingListing {
   eventId: string;
 }
 export interface MarketState {
+  streamNo: number;
+  streamLastTickAt: number;
   settings: Readonly<MarketSettings>;
   at: number;
   lastTickAt: number;
@@ -143,7 +149,9 @@ export interface MarketMoment {
     | "CRASH"
     | "BELL"
     | "PAUSED"
-    | "TOP";
+    | "TOP"
+    | "GREETING";
+  streak?: number;
   ticker?: string;
   price?: number;
   userId?: string;
@@ -197,6 +205,7 @@ const commands = new Set([
   "delist",
   "freeze",
   "unfreeze",
+  "greetings",
 ]);
 function approvedEmote(value: Emote): Emote | null {
   if (
@@ -412,6 +421,8 @@ export function initialMarketState({
     seenEvents: new Map(),
     startedAt: now,
     session: null,
+    streamNo: 0,
+    streamLastTickAt: now,
   };
 }
 export function marketDisplay(state: MarketState): MarketDisplay {
@@ -700,6 +711,7 @@ function applyMarket(
     };
   }
   if (input.type === "Tick") {
+    if (state.session?.closedAt === null) state.streamLastTickAt = now;
     for (const listing of state.listings.values()) {
       const dt = (now - Math.max(state.lastTickAt, listing.ipoAt)) / 1000;
       listing.heat *= 2 ** (-dt / state.settings.HEAT_HALF_LIFE);
@@ -746,6 +758,17 @@ function applyMarket(
             ]
           : [],
     };
+  if (input.command?.name === "greetings") {
+    const say = greeting(state, input, now, accounts, moments);
+    return {
+      state,
+      effects: [
+        accountWrites(persist(state, [], prunedListings), state, accounts),
+        broadcast(state, moments),
+        say,
+      ],
+    };
+  }
   const trader = touchTrader(state, input.chatter, input.origin, now, input.chatter.color);
   if (!input.command)
     state.participation.set(trader.id, {

@@ -1,4 +1,8 @@
 export interface MarketSettings {
+  STREAM_RESTART_GAP: number;
+  GREETING_BASE: number;
+  GREETING_STREAK_STEP: number;
+  GREETING_STREAK_CAP: number;
   STARTING_COINS: number;
   IPO_MIN_CHATTERS: number;
   IPO_WINDOW_MS: number;
@@ -18,6 +22,10 @@ export interface MarketSettings {
   RAID_WINDOW_MS: number;
 }
 export const defaultMarketSettings: Readonly<MarketSettings> = Object.freeze({
+  STREAM_RESTART_GAP: 7_200_000,
+  GREETING_BASE: 50,
+  GREETING_STREAK_STEP: 10,
+  GREETING_STREAK_CAP: 10,
   STARTING_COINS: 1000,
   IPO_MIN_CHATTERS: 2,
   IPO_WINDOW_MS: 600_000,
@@ -37,6 +45,10 @@ export const defaultMarketSettings: Readonly<MarketSettings> = Object.freeze({
   RAID_WINDOW_MS: 300_000,
 });
 const ranges: Record<keyof MarketSettings, readonly [number, number, boolean]> = {
+  STREAM_RESTART_GAP: [7_200_000, 7_200_000, true],
+  GREETING_BASE: [0, 1_000_000, true],
+  GREETING_STREAK_STEP: [0, 1_000_000, true],
+  GREETING_STREAK_CAP: [1, 1000, true],
   STARTING_COINS: [0, 1_000_000_000, true],
   IPO_MIN_CHATTERS: [2, 100, true],
   IPO_WINDOW_MS: [1000, 600_000, true],

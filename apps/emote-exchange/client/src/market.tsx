@@ -169,6 +169,7 @@ export function TradersPanel({ market, current }: { market?: OverlayMarket; curr
               <th scope="col">Coins</th>
               <th scope="col">Net Worth</th>
               <th scope="col">Status</th>
+              <th scope="col">Streak</th>
               <th scope="col">Action</th>
             </tr>
           </thead>
@@ -184,6 +185,7 @@ export function TradersPanel({ market, current }: { market?: OverlayMarket; curr
                   {coins(row.netWorth)}
                 </td>
                 <td>{row.frozen ? "Frozen" : "Active"}</td>
+                <td>{row.streak === null ? "—" : row.streak}</td>
                 <td>
                   <button
                     className="button button-secondary"

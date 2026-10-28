@@ -202,7 +202,7 @@ test("Exchange exposes foundation panels with an empty real market projection", 
   const { catalog, simulator, ...snapshot } = await response.json();
   assert.equal(simulator.running, false);
   assert.equal(simulator.eventCount, 0);
-  assert.equal(simulator.scenarios.length, 7);
+  assert.equal(simulator.scenarios.length, 8);
   assert.equal(catalog.ready, true);
   assert.equal(catalog.demoCount, 24);
   assert.equal(catalog.total, 24);

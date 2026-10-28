@@ -1,3 +1,4 @@
+import { shownStreak } from "./engine/greetings.ts";
 import type { MarketState } from "./engine/market.ts";
 import { marketDisplay } from "./engine/market.ts";
 import { netWorth } from "./engine/sessions.ts";
@@ -40,6 +41,7 @@ export function marketProjection(state: MarketState, status: "ready" | "storage-
       if (safeWorth > BigInt(Number.MAX_SAFE_INTEGER)) safeWorth = BigInt(Number.MAX_SAFE_INTEGER);
       return {
         userId: trader.id,
+        streak: shownStreak(state, trader),
         name: trader.displayName,
         login: trader.login,
         color: trader.color,

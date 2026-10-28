@@ -97,7 +97,15 @@ test("real simulator follow raid and bell effects pass through the market and ne
 test("Exchange scenarios supply input patterns and fixed bundled emotes without claiming market results", () => {
   assert.deepEqual(
     exchangeScenarios.map((scenario) => scenario.id),
-    ["opening-day", "pump-and-dump", "solo-spammer", "raid-wave", "quiet-market", "soak"],
+    [
+      "greeting-streak",
+      "opening-day",
+      "pump-and-dump",
+      "solo-spammer",
+      "raid-wave",
+      "quiet-market",
+      "soak",
+    ],
   );
   for (const scenario of exchangeScenarios) {
     let now = 0;

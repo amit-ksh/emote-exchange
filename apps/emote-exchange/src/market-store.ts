@@ -37,6 +37,10 @@ export const marketMigrations: readonly Migration[] = [
 `,
   },
   { version: 3, sql: "ALTER TABLE traders ADD COLUMN session_open_worth TEXT DEFAULT NULL;" },
+  {
+    version: 4,
+    sql: "ALTER TABLE traders ADD COLUMN greeting_streak INTEGER NOT NULL DEFAULT 0 CHECK(greeting_streak >= 0); ALTER TABLE traders ADD COLUMN last_greeting_stream_no INTEGER DEFAULT NULL; ALTER TABLE sessions ADD COLUMN stream_no INTEGER NOT NULL DEFAULT 0 CHECK(stream_no >= 0);",
+  },
 ];
 
 export function createMarketRepository(store: Store) {
@@ -51,7 +55,7 @@ export function createMarketRepository(store: Store) {
           checkpoint: saved?.data ?? null,
           traders: store
             .read<Omit<Trader, "frozen" | "isSim"> & { frozen: number; isSim: number }>(
-              "SELECT user_id AS id,login,display_name AS displayName,color,coins,frozen,created_at AS createdAt,last_active_at AS lastActiveAt,is_sim AS isSim,session_open_worth AS sessionOpenWorth FROM traders ORDER BY rowid",
+              "SELECT user_id AS id,login,display_name AS displayName,color,coins,frozen,created_at AS createdAt,last_active_at AS lastActiveAt,is_sim AS isSim,session_open_worth AS sessionOpenWorth,greeting_streak AS greetingStreak,last_greeting_stream_no AS lastGreetingStreamNo FROM traders ORDER BY rowid",
             )
             .map((row) => ({ ...row, frozen: Boolean(row.frozen), isSim: Boolean(row.isSim) })),
           listings: store
@@ -74,8 +78,9 @@ export function createMarketRepository(store: Store) {
               openedAt: number;
               closedAt: number | null;
               summary: string | null;
+              streamNo: number;
             }>(
-              "SELECT id,opened_at AS openedAt,closed_at AS closedAt,summary FROM sessions ORDER BY rowid",
+              "SELECT id,opened_at AS openedAt,closed_at AS closedAt,summary,stream_no AS streamNo FROM sessions ORDER BY rowid",
             )
             .map((row) => ({
               ...row,
@@ -105,7 +110,7 @@ export function createMarketRepository(store: Store) {
             writes.push({ sql: `DELETE FROM ${table}` });
         for (const row of effect.traders)
           writes.push({
-            sql: "INSERT INTO traders VALUES (?,?,?,?,?,?,?,?,?,?) ON CONFLICT(user_id) DO UPDATE SET login=excluded.login,display_name=excluded.display_name,color=excluded.color,coins=excluded.coins,frozen=excluded.frozen,last_active_at=excluded.last_active_at,is_sim=excluded.is_sim,session_open_worth=excluded.session_open_worth",
+            sql: "INSERT INTO traders VALUES (?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(user_id) DO UPDATE SET login=excluded.login,display_name=excluded.display_name,color=excluded.color,coins=excluded.coins,frozen=excluded.frozen,last_active_at=excluded.last_active_at,is_sim=excluded.is_sim,session_open_worth=excluded.session_open_worth,greeting_streak=excluded.greeting_streak,last_greeting_stream_no=excluded.last_greeting_stream_no",
             params: [
               row.id,
               row.login,
@@ -117,6 +122,8 @@ export function createMarketRepository(store: Store) {
               row.lastActiveAt,
               Number(row.isSim),
               row.sessionOpenWorth,
+              row.greetingStreak,
+              row.lastGreetingStreamNo,
             ],
           });
         for (const [status, listings] of [
@@ -183,12 +190,13 @@ export function createMarketRepository(store: Store) {
           });
         for (const row of effect.sessions)
           writes.push({
-            sql: "INSERT INTO sessions VALUES (?,?,?,?) ON CONFLICT(id) DO UPDATE SET closed_at=excluded.closed_at,summary=excluded.summary",
+            sql: "INSERT INTO sessions VALUES (?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET closed_at=excluded.closed_at,summary=excluded.summary,stream_no=excluded.stream_no",
             params: [
               row.id,
               row.openedAt,
               row.closedAt,
               row.summary ? JSON.stringify(row.summary) : null,
+              row.streamNo,
             ],
           });
         for (const row of effect.candles)

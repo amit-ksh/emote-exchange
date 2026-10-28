@@ -1,4 +1,5 @@
 import type { ChatEvent } from "@emote-exchange/twitch-kit";
+import { shownStreak } from "./greetings.ts";
 import type { MarketInput, MarketMoment, MarketSay, MarketState } from "./market.ts";
 import { netWorth } from "./sessions.ts";
 
@@ -30,7 +31,7 @@ export function marketCommand(
         return `${holding.ticker} x${holding.shares} (${gain >= 0 ? "+" : ""}${gain}%)`;
       });
     return reply(
-      `@${trader.login} ${trader.coins} Coins, ${holdings.join(", ") || "no shares"}, net worth ${netWorth(state, trader.id)}.`,
+      `@${trader.login} ${trader.coins} Coins, ${holdings.join(", ") || "no shares"}, net worth ${netWorth(state, trader.id)}${shownStreak(state, trader) ? `, streak ${shownStreak(state, trader)}` : ""}.`,
     );
   }
   if (name === "top") {

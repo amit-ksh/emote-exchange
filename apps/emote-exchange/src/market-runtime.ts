@@ -15,6 +15,8 @@ interface Options {
 export function createMarketRuntime(options: Options) {
   const repo = createMarketRepository(options.store);
   let state = repo.load(options.now(), options.catalog);
+  let awaitingBell = state.session?.closedAt === null;
+  const recoveredStreamTick = state.streamLastTickAt;
   let status: "ready" | "storage-error" = "ready";
   let closed = false;
   // Persist recovered analytical state and expired Listing deadlines atomically,
@@ -42,6 +44,11 @@ export function createMarketRuntime(options: Options) {
       throw new Error("Market is unavailable. Restart after resolving storage.");
     const now = options.now();
     const next = stepMarket(state, input, now);
+    // Recovery ticks must not erase the previous broadcast's end before EventSub
+    // confirms its next opening bell. This value is checkpointed on every tick.
+    if (awaitingBell && input.type === "Tick") next.state.streamLastTickAt = recoveredStreamTick;
+    if (input.type === "StreamOnline" || input.type === "StreamOffline" || input.type === "Reset")
+      awaitingBell = false;
     if (!next.effects.length) return;
     const budget = new Map([...next.state.replyCooldowns].filter(([, until]) => until > now));
     const says: Say[] = [];

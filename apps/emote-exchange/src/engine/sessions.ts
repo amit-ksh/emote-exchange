@@ -57,6 +57,14 @@ export function bell(
   moments: MarketMoment[],
 ): { sessions: MarketSession[]; says: MarketSay[] } {
   if (input.type === "StreamOnline") {
+    const lastEnd = state.session?.closedAt ?? state.streamLastTickAt;
+    if (
+      !state.session ||
+      input.origin === "sim" ||
+      now - lastEnd >= state.settings.STREAM_RESTART_GAP
+    )
+      state.streamNo++;
+    state.streamLastTickAt = now;
     for (const trader of state.traders.values())
       state.traders.set(trader.id, {
         ...trader,
@@ -69,7 +77,13 @@ export function bell(
     }
     const previous =
       state.session && state.session.closedAt === null ? [{ ...state.session, closedAt: now }] : [];
-    state.session = { id: `${input.id}:session`, openedAt: now, closedAt: null, summary: null };
+    state.session = {
+      streamNo: state.streamNo,
+      id: `${input.id}:session`,
+      openedAt: now,
+      closedAt: null,
+      summary: null,
+    };
     moments.push({
       id: `${input.id}:open`,
       at: now,
@@ -82,6 +96,7 @@ export function bell(
   if (state.session?.closedAt !== null && state.session !== null) return { sessions: [], says: [] };
   const result = summary(state);
   state.session = {
+    streamNo: state.streamNo,
     id: state.session?.id ?? `${input.id}:session`,
     openedAt: state.session?.openedAt ?? state.startedAt,
     closedAt: now,

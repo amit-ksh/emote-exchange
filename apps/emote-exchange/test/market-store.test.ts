@@ -30,6 +30,9 @@ test("schema 2 upgrades preserve Coins and Holdings without inventing a session 
   }
   // Recreate the previous on-disk schema around real persisted market rows.
   store.writeBatch([
+    { sql: "ALTER TABLE traders DROP COLUMN greeting_streak" },
+    { sql: "ALTER TABLE traders DROP COLUMN last_greeting_stream_no" },
+    { sql: "ALTER TABLE sessions DROP COLUMN stream_no" },
     { sql: "ALTER TABLE traders DROP COLUMN session_open_worth" },
     { sql: "PRAGMA user_version=2" },
   ]);

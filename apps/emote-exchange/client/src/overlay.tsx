@@ -328,6 +328,8 @@ function feedText(moment: MarketMoment) {
       return `${moment.name ?? "Trader"} ${moment.side?.toUpperCase()} ${moment.shares} ${moment.ticker} @ ${priceLabel(moment.price ?? 1)}`;
     case "FOLLOW":
       return `${moment.name} joined · +${moment.coins} Coins`;
+    case "GREETING":
+      return `${moment.name} greeted · streak ${moment.streak} · +${moment.coins}`;
     case "VISA":
       return `${moment.name} · Raid Visa +${moment.coins}`;
     case "RAID":
@@ -389,6 +391,12 @@ function Feed({
                   <span>{priceLabel(moment.price ?? 1)}</span>
                 </div>
               </>
+            ) : moment.kind === "GREETING" ? (
+              <p className="ex-feed-system">
+                <span>{moment.name}</span>
+                <span>greeted · streak {moment.streak} ·</span>
+                <strong>+{moment.coins}</strong>
+              </p>
             ) : moment.kind === "FOLLOW" || moment.kind === "VISA" ? (
               <p className="ex-feed-system">
                 <span>{moment.name ?? "Trader"}</span>
