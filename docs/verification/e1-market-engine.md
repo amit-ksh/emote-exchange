@@ -29,6 +29,8 @@ The ten new `test/market.test.ts` cases use only the public engine seam, explici
 
 ## Input/engine load probe
 
+These measurements describe the E1 milestone at commit `676e836`. E2 extends the same probe with earned Stipends, so its final balances are no longer fixed at 1,000 Coins; see [E2 verification](e2-trading-and-events.md) for current evidence.
+
 Reproduce with `pnpm probe:market`. It uses the real bundled assets, K6 Soak profile and normalized simulator output with seed 42. It drives 40 virtual minutes at 50 chat messages/second, warms up for ten minutes, then measures 1,800 engine ticks. This is an E1 input/engine probe, **not the full product soak**: no fills, SQL transactions, SSE clients, banner queues, Twitch sends or rendering are exercised.
 
 Observed on Windows x64, Node v24.22.1, **13th Gen Intel Core i5-13420H**:

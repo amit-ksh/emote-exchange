@@ -37,6 +37,8 @@ Done when the unit tests for 5.1-5.4 and B1, B2, B3 and B5 pass, and histories/c
 
 ## E2 Trading, fees, cooldowns, halts, moon and crash, stipend, bonuses
 
+**Complete — October 28, 2026.** The pure engine passes settlement/rejection rules, rewards, exact Halt boundaries, Moon/Crash, bells, Delist payouts, Freeze/Pause and confirmed Reset. Four seeded mixed-action runs verify integer Coins and reconcile every applied ledger amount. All 107 workspace tests and required checks pass. See [E2 verification](../verification/e2-trading-and-events.md) and [the written plan](../plans/e2-trading-and-events.md). Runtime, SQL/recovery, command reply budgets and live trade verification remain E3; product UI remains E4/E5.
+
 ```text
 Read docs/specs/emote-exchange.md sections 5.5-5.9 and 13 (Acceptance tests 4-10). Task E2.
 

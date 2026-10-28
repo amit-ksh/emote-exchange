@@ -1,6 +1,6 @@
 # Emote Exchange
 
-A local play-money emote market for Twitch, displayed through an OBS browser source. K1–K7 are implemented: SQLite storage, guarded actions, bounded SSE, Twitch sign-in, incoming events, queued chat sending, cached emote catalogs and the seeded simulator. The pure market calculations now pass [E1's tests and input probe](../../docs/verification/e1-market-engine.md). Trading, persistence wiring and the on-screen market remain in [the implementation plan](../../docs/implementation-plan.md).
+A local play-money emote market for Twitch, displayed through an OBS browser source. K1–K7 are implemented: SQLite storage, guarded actions, bounded SSE, Twitch sign-in, incoming events, queued chat sending, cached emote catalogs and the seeded simulator. Pure market calculations pass [E1's tests and input probe](../../docs/verification/e1-market-engine.md); settlement, rewards, Halts, bells and reset pass [E2's engine tests](../../docs/verification/e2-trading-and-events.md). Runtime/persistence wiring and the on-screen market remain in [the implementation plan](../../docs/implementation-plan.md).
 
 ## Run the foundation
 

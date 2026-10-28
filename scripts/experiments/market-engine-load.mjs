@@ -59,7 +59,8 @@ assert.ok(
   [...state.traders.values()].every(
     (trader) =>
       Number.isSafeInteger(trader.coins) &&
-      trader.coins === 1000 &&
+      trader.coins >= 1000 &&
+      trader.coins <= 1_000_000_000 &&
       trader.isSim &&
       trader.login.startsWith("sim_"),
   ),
@@ -68,7 +69,7 @@ ticks.sort((a, b) => a - b);
 console.log(
   JSON.stringify(
     {
-      scope: "E1 input/engine probe; full trading/runtime soak remains pending",
+      scope: "E1/E2 input/engine probe with Stipends; full trading/runtime soak remains pending",
       node: process.version,
       platform: process.platform,
       arch: process.arch,
@@ -80,6 +81,8 @@ console.log(
       messages,
       listings: state.listings.size,
       traders: state.traders.size,
+      minCoins: Math.min(...[...state.traders.values()].map((trader) => trader.coins)),
+      maxCoins: Math.max(...[...state.traders.values()].map((trader) => trader.coins)),
       tickP95Ms: ticks[Math.ceil(ticks.length * 0.95) - 1],
       tickMaxMs: ticks.at(-1),
       peakHeapMiB: peakHeap / 1024 ** 2,

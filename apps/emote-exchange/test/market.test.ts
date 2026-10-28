@@ -99,7 +99,11 @@ test("foreign, self-sent and command chat never adds Heat; recognized commands a
     const result = stepMarket(state, chat("sim_ignored", 0, ["A"], override), 0);
     assert.equal(result.state.traders.size, 0);
     assert.equal(result.state.pending.size, 0);
-    assert.equal(result.effects.length, 0);
+    assert.equal(
+      result.effects.filter((effect) => effect.type !== "persist").length,
+      0,
+      "unknown commands may record first-message eligibility without chat or Heat effects",
+    );
   }
   state = stepMarket(state, chat("sim_plain", 0), 0).state;
   assert.equal(state.traders.get("sim_plain")?.coins, 1000);
