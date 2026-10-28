@@ -1,6 +1,6 @@
 # K2 OAuth verification — October 28, 2026
 
-Implementation is ready. Live acceptance remains pending: the streamer must authorize the broadcaster and confirm restart persistence. Optional bot authorization requires its account. No Twitch login or consent was automated.
+K2's broadcaster live acceptance is complete. The streamer manually authorized both roles, and both restored successfully after an app restart and startup token validation on October 28, 2026. Both roles currently identify the same Twitch account; a distinct bot identity remains an optional check. No Twitch login or consent was automated.
 
 ## Implemented
 
@@ -20,11 +20,13 @@ Real Edge inspected the dashboard at 1920 × 1080 and 960 × 540, verified broad
 
 The user's `.env` is ignored. Only credential-presence booleans were printed; values were not displayed. Production smoke overrides credentials with empty strings and uses an isolated database.
 
-## Remaining live check
+## Live verification
 
-1. Open `http://localhost:4100/` and click **Connect Twitch** under Broadcaster.
-2. Sign in and approve Twitch's requested permissions manually.
-3. Confirm **Connected as @yourchannel** on the dashboard.
-4. Restart the app and verify the account returns. Test Disconnect/Reconnect; check the optional bot separately.
+1. The streamer confirmed successful broadcaster and bot-role connections.
+2. The public snapshot reported both roles connected before restart.
+3. The verified app process was restarted with `pnpm start:exchange`; startup validates stored tokens with Twitch.
+4. The public snapshot again reported both roles connected after restart. Credential values were not read or printed.
+
+Both roles have the same login. This verifies both authorization roles and restoration, but not a separate bot account. Dedicated-bot login and a manual Disconnect/Reconnect walkthrough remain optional follow-up checks; the broadcaster login and persistence completion bar has passed.
 
 The Demo mode label remains while live chat and market features are not connected. This milestone does not claim those later features are implemented.
