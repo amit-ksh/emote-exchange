@@ -1,4 +1,10 @@
 import type { Emote, Say, Store } from "@emote-exchange/twitch-kit";
+import {
+  analyticsProjection,
+  analyticsSummary,
+  initialAnalytics,
+  reduceAnalytics,
+} from "./engine/analytics.ts";
 import type { MarketEffect, MarketInput, MarketMoment } from "./engine/market.ts";
 import { initialMarketState, stepMarket } from "./engine/market.ts";
 import { marketProjection } from "./market-display.ts";
@@ -15,6 +21,12 @@ interface Options {
 export function createMarketRuntime(options: Options) {
   const repo = createMarketRepository(options.store);
   let state = repo.load(options.now(), options.catalog);
+  let analytics = initialAnalytics(
+    state.at,
+    state.streamNo,
+    repo.streamOpenedAt(state.streamNo) ?? state.at,
+  );
+  let recent = repo.analyticsHistory();
   let awaitingBell = state.session?.closedAt === null;
   const recoveredStreamTick = state.streamLastTickAt;
   let status: "ready" | "storage-error" = "ready";
@@ -62,6 +74,40 @@ export function createMarketRuntime(options: Options) {
         says.push(effect);
       }
     next.state.replyCooldowns = budget;
+    const nextAnalytics = reduceAnalytics(
+      analytics,
+      { event: input, before: state, after: next.state, effects: next.effects },
+      now,
+    );
+    let nextRecent = input.type === "Reset" ? [] : recent;
+    if (
+      input.type === "StreamOffline" &&
+      next.state.session?.summary &&
+      next.effects.some(
+        (effect) =>
+          effect.type === "persist" &&
+          effect.sessions.some((row) => row.id === next.state.session?.id),
+      )
+    ) {
+      const summary = analyticsSummary(
+        nextAnalytics,
+        now,
+        input.origin === "twitch" && state.session?.closedAt === null,
+      );
+      next.state.session = {
+        ...next.state.session,
+        summary: { ...next.state.session.summary, analytics: summary },
+      };
+      for (const effect of next.effects)
+        if (effect.type === "persist")
+          effect.sessions = effect.sessions.map((row) =>
+            row.id === next.state.session?.id ? structuredClone(next.state.session) : row,
+          );
+      if (summary.live)
+        nextRecent = [...recent.filter((row) => row.streamNo !== summary.streamNo), summary]
+          .sort((a, b) => a.closedAt - b.closedAt)
+          .slice(-5);
+    }
     try {
       repo.commit(next.state, next.effects);
     } catch {
@@ -70,6 +116,8 @@ export function createMarketRuntime(options: Options) {
       throw new Error("Market storage failed. No event effects were delivered.");
     }
     state = next.state;
+    analytics = nextAnalytics;
+    recent = nextRecent;
     const moments = next.effects.flatMap((effect) =>
       effect.type === "broadcast" ? effect.moments : [],
     );
@@ -94,6 +142,7 @@ export function createMarketRuntime(options: Options) {
     tick: () => receive({ type: "Tick" }),
     display: () => marketProjection(state, status),
     settings: () => ({ ...state.settings }),
+    analytics: () => analyticsProjection(analytics, state, options.now(), recent),
     setCatalog(catalog: readonly Emote[]) {
       if (!closed)
         state = { ...state, catalog: initialMarketState({ now: state.at, catalog }).catalog };

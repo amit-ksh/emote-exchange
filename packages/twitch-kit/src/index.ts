@@ -40,6 +40,13 @@ export function createHttpApp<Display extends object>(options: HttpAppOptions<Di
     if (context.req.method === "OPTIONS") {
       return context.json({ error: "Forbidden" }, 403);
     }
+    const origin = context.req.header("Origin");
+    if (
+      (context.req.path === "/events" || context.req.path.startsWith("/api/")) &&
+      origin !== undefined &&
+      !isAllowedOrigin(origin, options.port)
+    )
+      return context.json({ error: "Forbidden" }, 403);
     if (
       context.req.method !== "GET" &&
       context.req.method !== "HEAD" &&

@@ -49,6 +49,26 @@ export const marketMigrations: readonly Migration[] = [
 
 export function createMarketRepository(store: Store) {
   return {
+    streamOpenedAt(streamNo: number) {
+      return (
+        store.read<{ at: number | null }>(
+          "SELECT MIN(opened_at) AS at FROM sessions WHERE stream_no=?",
+          [streamNo],
+        )[0]?.at ?? null
+      );
+    },
+    analyticsHistory() {
+      return store
+        .read<{ summary: string }>(
+          "SELECT s.summary FROM sessions s WHERE s.closed_at IS NOT NULL AND json_extract(s.summary,'$.analytics.live')=1 AND s.rowid=(SELECT MAX(t.rowid) FROM sessions t WHERE t.stream_no=s.stream_no AND t.closed_at IS NOT NULL AND json_extract(t.summary,'$.analytics.live')=1) ORDER BY s.closed_at DESC LIMIT 5",
+        )
+        .map(
+          (row) =>
+            JSON.parse(row.summary)
+              .analytics as import("./engine/analytics.ts").StreamAnalyticsSummary,
+        )
+        .reverse();
+    },
     load(now: number, catalog: readonly Emote[] = []): MarketState {
       const saved = store.read<{ version: number; data: string }>(
         "SELECT version,data FROM engine_state WHERE singleton=1",

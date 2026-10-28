@@ -25,6 +25,7 @@ export async function startHttpServer(options: StartHttpServerOptions) {
     }
     app.use("/assets/*", serveStatic({ root: clientDist }));
     app.use("/demo-emotes/*", serveStatic({ root: clientDist }));
+    app.use("/fonts/*", serveStatic({ root: clientDist }));
     app.get("/", serveStatic({ path: resolve(clientDist, "index.html") }));
     app.get("/overlay", serveStatic({ path: resolve(clientDist, "index.html") }));
   }

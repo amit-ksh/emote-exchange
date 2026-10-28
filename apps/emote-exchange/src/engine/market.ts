@@ -51,6 +51,7 @@ export interface Credit {
   coins: number;
 }
 export interface SessionSummary {
+  analytics?: import("./analytics.ts").StreamAnalyticsSummary;
   topGainer: { ticker: string; changePercent: number } | null;
   biggestCrash: { ticker: string; changePercent: number } | null;
   richest: { userId: string; name: string; netWorth: number; capped: boolean } | null;

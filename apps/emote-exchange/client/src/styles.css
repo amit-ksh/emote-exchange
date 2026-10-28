@@ -222,6 +222,9 @@ dd {
   gap: 8px;
   min-height: 0;
   overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: var(--mute) transparent;
 }
 .nav-pill {
   border: 0;
@@ -1105,5 +1108,221 @@ dd {
   }
   .market-panel {
     padding: 20px;
+  }
+}
+.live-page {
+  display: grid;
+  gap: 20px;
+  min-width: 0;
+}
+.live-toolbar,
+.live-stream-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.live-stream-meta {
+  justify-content: flex-end;
+  color: var(--secondary);
+  font-size: 13px;
+}
+.live-source {
+  display: flex;
+  border: 0;
+  gap: 4px;
+  padding: 4px;
+  background: var(--g);
+  border-radius: var(--pill);
+  margin: 0;
+}
+.live-source legend {
+  float: left;
+  padding: 8px 12px;
+  font-size: 13px;
+  color: var(--secondary);
+}
+.live-source .button {
+  min-width: 60px;
+  padding: 8px 16px;
+  background: transparent;
+}
+.live-source .button[aria-pressed="true"] {
+  background: var(--ink);
+  color: var(--bg);
+}
+.live-stat-note {
+  color: var(--secondary);
+  font-size: 12px;
+}
+.live-stats .display-number {
+  font-size: clamp(32px, 3.8vw, 52px);
+}
+.live-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+}
+.live-card {
+  margin-bottom: 0;
+}
+.live-spark {
+  margin-top: 22px;
+}
+.live-spark > div {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+}
+.live-spark > div span {
+  color: var(--secondary);
+  font-size: 13px;
+}
+.live-spark > div strong {
+  font-weight: 500;
+}
+.live-spark svg {
+  display: block;
+  width: 100%;
+  height: 72px;
+  margin-top: 8px;
+}
+.live-spark polyline {
+  stroke: var(--ink);
+  stroke-width: 2;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+.live-spark .spark-baseline {
+  stroke: var(--line);
+  stroke-width: 1;
+}
+.live-chart-axis {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: var(--secondary);
+  margin: 8px 0;
+}
+.live-ledger {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  column-gap: 16px;
+  row-gap: 14px;
+  margin: 24px 0;
+}
+.live-ledger dt {
+  color: var(--secondary);
+}
+.live-page .live-ledger dd {
+  text-align: right;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.ledger-source {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  column-gap: 16px;
+  padding-left: 16px;
+  font-size: 13px;
+}
+.live-hottest {
+  display: grid;
+  gap: 4px;
+  margin: 20px 0;
+}
+.live-page .live-hottest strong {
+  font-size: 26px;
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+.live-page .live-hottest span {
+  color: var(--secondary);
+}
+.live-movers {
+  margin-top: 20px;
+}
+.live-movers ul,
+.live-moments {
+  list-style: none;
+  margin: 12px 0;
+  padding: 0;
+}
+.live-movers li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--line);
+}
+.live-page .live-movers li span {
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+.live-page .live-movers strong {
+  flex: none;
+  font-weight: 500;
+}
+.live-moments {
+  max-height: 420px;
+  overflow: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--mute) transparent;
+}
+.live-moments li {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line);
+}
+.live-page .live-moments strong {
+  overflow-wrap: anywhere;
+  font-weight: 500;
+}
+.live-moments time {
+  font-size: 12px;
+  color: var(--secondary);
+}
+.live-empty {
+  display: grid;
+  justify-items: start;
+  gap: 16px;
+}
+.grant-form form label {
+  display: grid;
+  gap: 8px;
+  max-width: 280px;
+  margin-top: 12px;
+}
+@media (max-width: 1100px) {
+  .live-grid {
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 600px) {
+  .live-toolbar {
+    align-items: flex-start;
+  }
+  .live-stream-meta {
+    justify-content: flex-start;
+    gap: 8px;
+  }
+  .live-stats .stat-card {
+    padding: 16px;
+  }
+  .live-ledger {
+    font-size: 14px;
+  }
+  .live-source legend {
+    padding: 8px;
+  }
+  .live-source .button {
+    min-width: 52px;
+    padding: 8px 12px;
   }
 }

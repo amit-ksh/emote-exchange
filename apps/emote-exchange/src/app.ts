@@ -12,6 +12,7 @@ import {
   loadDemoCatalog,
   openStore,
 } from "@emote-exchange/twitch-kit";
+import { createAnalyticsFeed } from "./analytics-feed.ts";
 import type { MarketMoment } from "./engine/market.ts";
 import { defaultMarketSettings } from "./engine/settings.ts";
 import { createMarketRuntime } from "./market-runtime.ts";
@@ -159,6 +160,23 @@ export function createExchangeRuntime({
       },
     });
     const app = createHttpApp({ port, bus });
+    const analyticsFeed = createAnalyticsFeed({ now, snapshot: market.analytics });
+    cleanup.push(() => analyticsFeed.close());
+    app.get(
+      "/api/analytics/events",
+      (context) =>
+        new Response(
+          context.req.method === "HEAD" ? null : analyticsFeed.connect(context.req.raw.signal),
+          {
+            headers: {
+              "Content-Type": "text/event-stream",
+              "Cache-Control": "no-store",
+              Connection: "keep-alive",
+              "X-Accel-Buffering": "no",
+            },
+          },
+        ),
+    );
     cleanup.push(() => bus.close());
     auth.mount(app);
     app.get("/setup-guide", (context) =>
@@ -385,6 +403,7 @@ export function createExchangeRuntime({
         helix.close();
         auth.close();
         bus.close();
+        analyticsFeed.close();
         store.close();
       },
     };

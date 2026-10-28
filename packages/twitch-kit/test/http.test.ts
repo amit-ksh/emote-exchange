@@ -28,6 +28,30 @@ test("health reports a running local server", async () => {
   assert.deepEqual(await response.json(), { ok: true });
 });
 
+test("display reads reject an explicit untrusted Origin while local readers keep working", async () => {
+  const app = createTestApp();
+  for (const path of ["/api/snapshot", "/events?client=overlay"]) {
+    assert.equal(
+      (
+        await app.request(`http://localhost:4100${path}`, {
+          method: "HEAD",
+          headers: { Host: "localhost:4100", Origin: "https://evil.test" },
+        })
+      ).status,
+      403,
+    );
+    assert.equal(
+      (
+        await app.request(`http://localhost:4100${path}`, {
+          method: "HEAD",
+          headers: { Host: "localhost:4100", Origin: "http://localhost:4100" },
+        })
+      ).status,
+      200,
+    );
+  }
+});
+
 test("every route rejects missing or unrelated Host values", async () => {
   const app = createTestApp();
   for (const path of ["/healthz", "/api/snapshot", "/events", "/", "/assets/missing.js"]) {
