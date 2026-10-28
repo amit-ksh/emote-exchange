@@ -22,6 +22,8 @@ Done when all five fixed fixtures meet their thresholds with recorded defaults, 
 
 ## E1 Market engine: listings, heat, price, ticks, candles
 
+**Complete — October 28, 2026.** The pure engine passes Trader/qualifying-use/IPO rules, exact repeat and IPO expiry boundaries, the 24-Listing cap and coldest-unused replacement, fixed B1/B2/B3/B5 endpoints, quiet/impact/rounding behavior and bounded candles/history. A 120,000-message input/engine probe retained 24 Listings and 500 Traders; tick p95 was 1.26 ms on the recorded machine. No defaults changed. Trading, runtime/SQLite wiring and product UI remain E2–E5 work. See [E1 verification](../verification/e1-market-engine.md) and [the written plan](../plans/e1-market-engine.md). The plan was not filmed.
+
 Use `/plan` first. Film the plan.
 
 ```text

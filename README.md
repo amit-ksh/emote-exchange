@@ -6,11 +6,11 @@ This repository focuses on one Codex x TwitchCon hackathon entry. The plan is to
 
 ## Status
 
-The single-app plan, local foundation and K1–K7 are complete: private SQLite storage, guarded HTTP actions, bounded SSE, Twitch OAuth, incoming events, queued chat sending, cached emote catalogs and a seeded simulator with 24 original offline assets. Live reception, chat sending, 7TV and keyless offline simulation are verified. Market rules and the complete overlay remain in [the sprint plan](docs/sprints/README.md).
+The single-app plan, local foundation and K1–K7 are complete: private SQLite storage, guarded HTTP actions, bounded SSE, Twitch OAuth, incoming events, queued chat sending, cached emote catalogs and a seeded simulator with 24 original offline assets. Live reception, chat sending, 7TV and keyless offline simulation are verified. E1's pure market calculations pass automated checks; trading, market runtime wiring and the complete product overlay remain in [the sprint plan](docs/sprints/README.md).
 
 ## Quick start
 
-The [E0 numerical experiment](docs/verification/e0-behavior-fixtures.md) passes all five fixed behavior targets with the planned defaults. Run `pnpm experiment:market` to reproduce it. The application market engine is the next implementation task.
+The [E0 numerical experiment](docs/verification/e0-behavior-fixtures.md) passes all five fixed behavior targets with the planned defaults. Run `pnpm experiment:market` to reproduce it. The [E1 engine](docs/verification/e1-market-engine.md) reproduces B1/B2/B3/B5 and passes a 24-Listing/500-Trader input probe (`pnpm probe:market`). Trading is the next implementation task; market state is not yet wired into the dashboard.
 
 Use Node.js 24.12+ in the Node 24 LTS line and pnpm 11.25.0, then run from the repository root:
 
