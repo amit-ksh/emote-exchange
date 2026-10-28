@@ -5,11 +5,14 @@ import {
   createHelix,
   createSimulator,
   loadDemoCatalog,
+  openStore,
 } from "@emote-exchange/twitch-kit";
-import { exchangeScenarios, simulationNotices } from "../src/simulation.ts";
+import { createMarketRuntime } from "../src/market-runtime.ts";
+import { marketMigrations } from "../src/market-store.ts";
+import { exchangeScenarios } from "../src/simulation.ts";
 
 const emotes = loadDemoCatalog(new URL("../client/public/demo-emotes/", import.meta.url));
-test("real simulator follow, raid and bell events never send live chat through the app's notice handler", async (t) => {
+test("real simulator follow raid and bell effects pass through the market and never send live chat", async (t) => {
   let now = 1000;
   let fetches = 0;
   const auth = {
@@ -28,6 +31,15 @@ test("real simulator follow, raid and bell events never send live chat through t
     },
   });
   const chat = createChatOut({ auth, helix, now: () => now, autoTick: false });
+  const store = openStore({ filename: ":memory:", migrations: marketMigrations });
+  const market = createMarketRuntime({
+    store,
+    now: () => now,
+    catalog: emotes,
+    autoTick: false,
+    say: chat.enqueue,
+    publish: () => {},
+  });
   const events: string[] = [];
   const simulator = createSimulator({
     emotes,
@@ -36,13 +48,15 @@ test("real simulator follow, raid and bell events never send live chat through t
     autoTick: false,
     onEvent: (event) => {
       events.push(event.type);
-      for (const say of simulationNotices(event)) chat.enqueue(say);
+      market.receive(event);
     },
   });
   t.after(() => {
     simulator.close();
+    market.close();
     chat.close();
     helix.close();
+    store.close();
   });
   simulator.start({
     seed: 42,
@@ -66,7 +80,7 @@ test("real simulator follow, raid and bell events never send live chat through t
     ),
   );
   assert.equal(fetches, 0);
-  assert.ok(chat.publicState().logs.length >= 4);
+  assert.ok(chat.publicState().logs.some((entry) => entry.text.startsWith("Closing bell:")));
   assert.ok(
     chat
       .publicState()

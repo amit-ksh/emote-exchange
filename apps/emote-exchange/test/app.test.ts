@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 import { createExchangeRuntime } from "../src/app.ts";
+import { chat } from "./market-fixture.ts";
 
 test("overlay checklist counts only overlay SSE clients and reconnects with a fresh snapshot", async (t) => {
   const runtime = createExchangeRuntime();
@@ -81,6 +82,83 @@ test("overlay checklist counts only overlay SSE clients and reconnects with a fr
   assert.equal(packet.overlayClients, 0);
 });
 
+test("normalized chat and simulator events drive persisted market snapshots and one-second Price ticks", async (t) => {
+  let now = 0;
+  const runtime = createExchangeRuntime({ now: () => now, marketAutoTick: false });
+  t.after(() => runtime.close());
+  const snapshot = async () =>
+    (
+      await runtime.app.request("http://localhost:4100/api/snapshot", {
+        headers: { Host: "localhost:4100" },
+      })
+    ).json();
+  runtime.receiveEvent(chat("sim_ann", 0, null, [], ["DemoBull"]));
+  runtime.receiveEvent(chat("sim_bob", 0, null, [], ["DemoBull"]));
+  runtime.receiveEvent(chat("sim_ann", 0, "buy", ["DemoBull", "5"]));
+  let packet = await snapshot();
+  assert.equal(
+    packet.market.traders.find((trader: { userId: string }) => trader.userId === "sim_ann").coins,
+    495,
+  );
+  assert.equal(packet.market.listings[0].ticker, "DemoBull");
+  assert.ok(packet.moments.some((moment: { kind: string }) => moment.kind === "TRADE"));
+  assert.ok(
+    packet.chatOut.logs.some((log: { text: string }) => log.text.includes("BUY 5 DemoBull")),
+  );
+  now = 1000;
+  runtime.tickMarket();
+  packet = await snapshot();
+  assert.ok(packet.market.listings[0].price > 100.1);
+  assert.equal(JSON.stringify(packet).includes("private incoming chat"), false);
+  assert.equal(JSON.stringify(packet).includes("priceHistory"), false);
+  assert.equal(JSON.stringify(packet).includes("replyCooldowns"), false);
+});
+
+test("keyless Opening day lists at least four emotes within two minutes through automatic app ticks", async (t) => {
+  t.mock.timers.enable({ apis: ["setInterval"] });
+  let now = 0;
+  const runtime = createExchangeRuntime({ now: () => now });
+  t.after(() => runtime.close());
+  const response = await runtime.app.request("http://localhost:4100/api/sim/start", {
+    method: "POST",
+    headers: {
+      Host: "localhost:4100",
+      Origin: "http://localhost:4100",
+      "X-CTA": "1",
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      seed: 42,
+      scenario: "opening-day",
+      rate: 4,
+      chatters: 12,
+      mix: { plain: 65, emote: 30, follow: 4, raid: 1 },
+    }),
+  });
+  assert.equal(response.status, 200);
+  for (let second = 1; second <= 120; second++) {
+    now = second * 1000;
+    t.mock.timers.tick(1000);
+  }
+  const packet = await (
+    await runtime.app.request("http://localhost:4100/api/snapshot", {
+      headers: { Host: "localhost:4100" },
+    })
+  ).json();
+  assert.equal(packet.mode, "demo");
+  assert.equal(packet.market.status, "ready");
+  assert.ok(packet.market.listings.length >= 4);
+  assert.ok(
+    packet.market.traders.some((trader: { holdings: unknown[] }) => trader.holdings.length > 0),
+  );
+  assert.ok(
+    packet.chatOut.logs.every(
+      (log: { kind: string; origin: string }) =>
+        log.kind === "would-have-said" && log.origin === "sim",
+    ),
+  );
+});
+
 test("Twitch configuration exposes only safe state and disconnect remains guarded", async (t) => {
   const runtime = createExchangeRuntime({
     clientId: "private-test-id",
@@ -113,7 +191,7 @@ test("Twitch configuration exposes only safe state and disconnect remains guarde
   assert.equal(accepted.status, 200);
 });
 
-test("Exchange exposes an honest foundation-only display snapshot", async (context) => {
+test("Exchange exposes foundation panels with an empty real market projection", async (context) => {
   const runtime = createExchangeRuntime();
   context.after(() => runtime.close());
   const { app } = runtime;
@@ -153,6 +231,15 @@ test("Exchange exposes an honest foundation-only display snapshot", async (conte
     overlayClients: 0,
     connectionChecks: 0,
     moments: [],
+    market: {
+      status: "ready",
+      traderCount: 0,
+      feed: [],
+      listings: [],
+      traders: [],
+      paused: false,
+      session: null,
+    },
     chatOut: { quiet: false, pending: 0, sending: false, sender: null, logs: [] },
     eventsub: {
       status: "disconnected",

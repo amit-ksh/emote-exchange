@@ -1,4 +1,4 @@
-import type { ChatEvent, Say, SimScenario } from "@emote-exchange/twitch-kit";
+import type { SimScenario } from "@emote-exchange/twitch-kit";
 
 const mixed = { plain: 65, emote: 30, follow: 4, raid: 1 };
 const emoteAt = (emotes: readonly { name: string }[], index: number) =>
@@ -86,15 +86,3 @@ export const exchangeScenarios: SimScenario[] = [
     }),
   },
 ];
-
-// These are diagnostic previews until the market engine supplies its own say effects.
-export function simulationNotices(event: ChatEvent): Say[] {
-  if (event.origin !== "sim") return [];
-  let text: string;
-  if (event.type === "Follow") text = `Simulation preview: ${event.user.displayName} followed.`;
-  else if (event.type === "Raid") text = `Simulation preview: raid with ${event.viewers} viewers.`;
-  else if (event.type === "StreamOnline") text = "Simulation preview: opening bell.";
-  else if (event.type === "StreamOffline") text = "Simulation preview: closing bell.";
-  else return [];
-  return [{ text, origin: event.origin, priority: "ambient" }];
-}

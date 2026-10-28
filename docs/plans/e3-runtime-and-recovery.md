@@ -1,0 +1,9 @@
+# E3 runtime and recovery plan
+
+October 28, 2026. Test first at the established public engine seam and the new market persistence/runtime boundary. No dependency or UI work is planned.
+
+1. Add a versioned checkpoint containing bounded rule state, separate from durable Trader/Holding/Listing/candle/session/first-message rows. Restore from rows purely; same-time restoration preserves business and rule state while clearing ephemeral Feed/moment playback. Short gaps decay Heat/impact without changing cached Prices or inventing rewards/candles; long gaps clear stale Heat/impact/pending/repeats. Expire elapsed windows against injected recovery time.
+2. Add ordered SQLite migrations and an adapter that commits all event row effects plus the final checkpoint in one transaction. Test reopen equivalence and rollback; keep Trade history out of in-memory checkpoints. Reject unsupported checkpoints rather than silently starting a fresh market.
+3. Extend command handling for portfolio/pf, top, market and badge-authorized moderation actions. Preserve exact Trade semantics and provenance. Keep a per-Trader 20-second reply budget in bounded checkpoint state, independently of accepted Trades and overlay feedback. Test non-Mod denial, budget expiry/restart, and the real queue boundary under a 100-command burst.
+4. Wire catalog refreshes, normalized Twitch/simulator events and a one-second processing tick to the engine. Persist before assigning state, publishing or enqueueing Say effects. Use only the existing chat-out queue. Publish an explicit market projection through the existing snapshot/SSE bus; raw chat and internal checkpoints remain server-side.
+5. Run repository checks, route smoke, recovery/reply/mixed-source regressions and record a live buy if a test account can provide it. Actual live acceptance is distinct from mocked transport. Commit E3 with verification evidence; product overlay/dashboard work follows in E4/E5.

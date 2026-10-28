@@ -1,6 +1,7 @@
 import type { ChatEvent, Emote, Say } from "@emote-exchange/twitch-kit";
 import type { AccountChanges } from "./accounts.ts";
 import { accountChanges, accountWrites, settleDelist } from "./accounts.ts";
+import { marketCommand } from "./commands.ts";
 import { priceEvents } from "./price-events.ts";
 import { advanceRewards, followOrRaid, observeMessage, touchTrader } from "./rewards.ts";
 import { bell } from "./sessions.ts";
@@ -114,6 +115,7 @@ export interface MarketState {
   repeats: Map<string, Map<string, number[]>>;
   holdings: Map<string, Map<string, Holding>>;
   cooldowns: Map<string, number>;
+  replyCooldowns: Map<string, number>;
   feed: MarketMoment[];
   paused: boolean;
   participation: Map<string, { minuteStart: number; origin: ChatEvent["origin"] }>;
@@ -138,7 +140,8 @@ export interface MarketMoment {
     | "MOON"
     | "CRASH"
     | "BELL"
-    | "PAUSED";
+    | "PAUSED"
+    | "TOP";
   ticker?: string;
   price?: number;
   userId?: string;
@@ -289,7 +292,13 @@ function persist(
   listings: Listing[],
   delisted: Listing[] = [],
 ): Extract<MarketEffect, { type: "persist" }> {
-  const unique = [...new Map(listings.map((listing) => [listing.emote.name, listing])).values()];
+  const unique = [
+    ...new Map(
+      listings
+        .filter((listing) => state.listings.has(listing.emote.name))
+        .map((listing) => [listing.emote.name, listing]),
+    ).values(),
+  ];
   return {
     type: "persist",
     checkpoint: true,
@@ -392,6 +401,7 @@ export function initialMarketState({
     repeats: new Map(),
     holdings: new Map(),
     cooldowns: new Map(),
+    replyCooldowns: new Map(),
     feed: [],
     paused: false,
     participation: new Map(),
@@ -489,7 +499,7 @@ function promote(
     });
   }
 }
-export function stepMarket(
+function applyMarket(
   previous: MarketState,
   input: MarketInput,
   now: number,
@@ -814,4 +824,31 @@ export function stepMarket(
       broadcast(state, moments),
     ],
   };
+}
+
+export function stepMarket(
+  previous: MarketState,
+  input: MarketInput,
+  now: number,
+): { state: MarketState; effects: MarketEffect[] } {
+  const result = applyMarket(previous, input, now);
+  if (
+    !result.effects.length ||
+    input.type !== "ChatMessage" ||
+    input.foreign ||
+    input.selfSent ||
+    !input.command ||
+    input.command.name === "buy" ||
+    input.command.name === "sell"
+  )
+    return result;
+  const command = marketCommand(result.state, input, now);
+  if (command.action) {
+    const action = applyMarket(result.state, command.action, now);
+    result.state = action.state;
+    result.effects.push(...action.effects);
+  }
+  if (command.moment) result.effects.push(broadcast(result.state, [command.moment]));
+  if (command.say) result.effects.push(command.say);
+  return result;
 }

@@ -36,7 +36,7 @@ try {
     runtime.close();
     throw error;
   }
-  console.log(`Emote Exchange foundation · http://localhost:${port}`);
+  console.log(`Emote Exchange · http://localhost:${port}`);
   console.log(`OBS overlay: http://127.0.0.1:${port}/overlay`);
   const maintenance = setInterval(() => {
     void runtime.maintenance().catch(() => {});

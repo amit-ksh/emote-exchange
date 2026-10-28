@@ -86,6 +86,15 @@ try {
     overlayClients: 0,
     connectionChecks: 0,
     moments: [],
+    market: {
+      status: "ready",
+      traderCount: 0,
+      feed: [],
+      listings: [],
+      traders: [],
+      paused: false,
+      session: null,
+    },
     chatOut: { quiet: false, pending: 0, sending: false, sender: null, logs: [] },
     eventsub: {
       status: "disconnected",
@@ -214,7 +223,9 @@ try {
   for (const type of ["follow", "raid", "offline"])
     assert.equal((await action("event", { type, viewers: 40 })).status, 200);
   const preview = await (await fetch(`${origin}/api/snapshot`)).json();
-  assert.ok(preview.chatOut.logs.length >= 4);
+  assert.ok(preview.chatOut.logs.some((entry) => entry.text.startsWith("Closing bell:")));
+  for (const kind of ["FOLLOW", "RAID", "BELL"])
+    assert.ok(preview.moments.some((moment) => moment.kind === kind));
   assert.ok(
     preview.chatOut.logs.every(
       (entry) => entry.kind === "would-have-said" && entry.origin === "sim",

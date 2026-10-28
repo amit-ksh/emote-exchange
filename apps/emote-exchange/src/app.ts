@@ -11,8 +11,11 @@ import {
   loadDemoCatalog,
   openStore,
 } from "@emote-exchange/twitch-kit";
+import type { MarketMoment } from "./engine/market.ts";
+import { createMarketRuntime } from "./market-runtime.ts";
+import { marketMigrations } from "./market-store.ts";
 import type { FoundationDisplay } from "./public-state.ts";
-import { exchangeScenarios, simulationNotices } from "./simulation.ts";
+import { exchangeScenarios } from "./simulation.ts";
 
 interface ExchangeRuntimeOptions {
   port?: number;
@@ -23,6 +26,7 @@ interface ExchangeRuntimeOptions {
   publicOrigin?: string;
   wsUrl?: string;
   subscriptionsUrl?: string;
+  marketAutoTick?: boolean;
 }
 
 export function createExchangeRuntime({
@@ -34,12 +38,16 @@ export function createExchangeRuntime({
   publicOrigin = `http://localhost:${port}`,
   wsUrl,
   subscriptionsUrl,
+  marketAutoTick,
 }: ExchangeRuntimeOptions = {}) {
-  const store = openStore({ filename });
+  const store = openStore({ filename, migrations: marketMigrations });
+  const cleanup: (() => void)[] = [];
   try {
     const settings = store.settings({ connectionChecks: 0, quietMode: false, simulationRuns: 0 });
     let publishState = () => {};
     let syncAuth = () => {};
+    let syncMarketCatalog = () => {};
+    let publishMarket = (_moments: MarketMoment[]) => {};
     const auth = createTwitchAuth({
       store,
       clientId,
@@ -52,6 +60,10 @@ export function createExchangeRuntime({
       },
     });
     const helix = createHelix({ auth, clientId, now });
+    cleanup.push(
+      () => auth.close(),
+      () => helix.close(),
+    );
     const demoEmotes = loadDemoCatalog(new URL("../client/public/demo-emotes/", import.meta.url));
     const catalog = createEmoteCatalog({
       store,
@@ -59,7 +71,10 @@ export function createExchangeRuntime({
       helix,
       now,
       demo: demoEmotes,
-      onChange: () => publishState(),
+      onChange: () => {
+        syncMarketCatalog();
+        publishState();
+      },
     });
     const chatOut = createChatOut({
       auth,
@@ -68,9 +83,21 @@ export function createExchangeRuntime({
       quiet: settings.get("quietMode"),
       onChange: () => publishState(),
     });
-    const receiveEvent = (event: Parameters<typeof simulationNotices>[0]) => {
-      for (const say of simulationNotices(event)) chatOut.enqueue(say);
-    };
+    cleanup.push(
+      () => catalog.close(),
+      () => chatOut.close(),
+    );
+    const market = createMarketRuntime({
+      store,
+      now,
+      catalog: catalog.entries(),
+      autoTick: marketAutoTick,
+      say: chatOut.enqueue,
+      publish: (moments) => publishMarket(moments),
+    });
+    cleanup.push(() => market.close());
+    syncMarketCatalog = () => market.setCatalog(catalog.entries());
+    const receiveEvent = market.receive;
     const simulator = createSimulator({
       emotes: demoEmotes,
       scenarios: exchangeScenarios,
@@ -92,6 +119,10 @@ export function createExchangeRuntime({
       lookupEmote: (word) => catalog.lookup(word),
       onEvent: receiveEvent,
     });
+    cleanup.push(
+      () => simulator.close(),
+      () => eventsub.close(),
+    );
     syncAuth = () => {
       chatOut.syncAuth();
       catalog.syncAuth();
@@ -110,6 +141,7 @@ export function createExchangeRuntime({
       catalog: catalog.publicState(),
       simulator: simulator.publicState(),
       overlayClients: 0,
+      market: market.display(),
     };
     if (!Number.isSafeInteger(projection.connectionChecks) || projection.connectionChecks < 0) {
       throw new Error("Stored local connection check count is invalid.");
@@ -125,6 +157,7 @@ export function createExchangeRuntime({
       },
     });
     const app = createHttpApp({ port, bus });
+    cleanup.push(() => bus.close());
     auth.mount(app);
     app.get("/setup-guide", (context) =>
       context.text(readFileSync(new URL("../../../docs/setup-guide.md", import.meta.url), "utf8")),
@@ -140,11 +173,14 @@ export function createExchangeRuntime({
       catalog: catalog.publicState(),
       simulatorRunning: simulator.publicState().running,
       simulator: simulator.publicState(),
+      market: market.display(),
     });
-    publishState = () =>
-      bus.publish({
-        ...display(),
-      });
+    publishMarket = (moments) =>
+      bus.publish(
+        display(),
+        moments.map((moment) => ({ ...moment })),
+      );
+    publishState = () => publishMarket([]);
     app.post("/api/sim/start", async (context) => {
       if (simulator.publicState().running)
         return context.json({ error: "Stop the current simulation before starting another." }, 409);
@@ -240,6 +276,8 @@ export function createExchangeRuntime({
     return {
       app,
       enqueueSay: chatOut.enqueue,
+      receiveEvent,
+      tickMarket: market.tick,
       initialize: async () => {
         await auth.initialize();
         eventsub.syncAuth();
@@ -250,6 +288,7 @@ export function createExchangeRuntime({
         if (closed) return;
         closed = true;
         simulator.close();
+        market.close();
         catalog.close();
         chatOut.close();
         eventsub.close();
@@ -260,6 +299,7 @@ export function createExchangeRuntime({
       },
     };
   } catch (error) {
+    for (const close of cleanup.reverse()) close();
     store.close();
     throw error;
   }

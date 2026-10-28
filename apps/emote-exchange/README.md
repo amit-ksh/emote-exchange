@@ -1,6 +1,6 @@
 # Emote Exchange
 
-A local play-money emote market for Twitch, displayed through an OBS browser source. K1–K7 are implemented: SQLite storage, guarded actions, bounded SSE, Twitch sign-in, incoming events, queued chat sending, cached emote catalogs and the seeded simulator. Pure market calculations pass [E1's tests and input probe](../../docs/verification/e1-market-engine.md); settlement, rewards, Halts, bells and reset pass [E2's engine tests](../../docs/verification/e2-trading-and-events.md). Runtime/persistence wiring and the on-screen market remain in [the implementation plan](../../docs/implementation-plan.md).
+A local play-money emote market for Twitch, displayed through an OBS browser source. K1–K7 and E1/E2 are verified. [E3](../../docs/verification/e3-runtime-and-recovery.md) connects real/simulated events and one-second ticks to the market, persists settlement/checkpoints atomically, restores after restart and queues command replies. Automated checks pass; a second non-bot Twitch account is needed for the remaining live buy acceptance. The complete on-screen market remains E4/E5 in [the implementation plan](../../docs/implementation-plan.md).
 
 ## Run the foundation
 
@@ -11,7 +11,7 @@ pnpm install
 pnpm dev:exchange
 ```
 
-Open [the dashboard](http://localhost:4100/) and [the overlay](http://127.0.0.1:4100/overlay). No credentials or `.env` are required. Click **Start demo** to generate simulated chat and channel events immediately. Market prices and trade outcomes arrive in Sprint 2.
+Open [the dashboard](http://localhost:4100/) and [the overlay](http://127.0.0.1:4100/overlay). No credentials or `.env` are required. Click **Start demo** to drive the market with simulated chat and channel events. Market data is available in `/api/snapshot`; market widgets arrive in E4/E5.
 
 For the built client:
 
@@ -66,9 +66,9 @@ To use your own 7TV emotes, sign in to 7TV with the connected Twitch account, ad
 
 In **Give it a dry run**, choose a scenario, seed, message rate (0.2–50 per second), chatter count (1–500) and persona weights, then click **Start demo** or **Start simulator**. The simulated counter climbs independently of the live EventSub counter. **Stop simulator** stops generation. Stop before changing settings. Persona weights are relative; scripted presets reserve some message slots for their own commands and emote patterns. Follow and raid generators add channel events alongside the configured chat-message rate.
 
-While running, use **Fake follow**, **Fake raid**, **Open bell** and **Close bell** to inject simulated events. Raid viewers must be 1–10,000. Their diagnostic previews appear under **Would have said**, including while live Twitch auth is connected. Simulation never uses the live chat sender. The dashboard and OBS overlay display **SIM** while the generator runs, and the badge clears after Stop.
+While running, use **Fake follow**, **Fake raid**, **Open bell** and **Close bell** to inject simulated market events. Raid viewers must be 1–10,000. Follows/Raids update rewards and moments; Close bell produces the Session Summary under **Would have said**, including while Twitch is connected. Simulation never uses the live sender. Dashboard and overlay show **SIM** while the generator runs; Stop clears the badge.
 
-Free play plus Opening day, Pump and dump, Solo spammer, Raid wave, Quiet market and Soak are available. These generate normalized input events; price movements, IPOs, balances and fills await the market engine. The Solo spammer profile includes three initial B uses before its steady message schedule. Soak uses a fixed 500-chatter/24-emote pool for 40 virtual minutes, including the future 10-minute market warm-up.
+Free play plus Opening day, Pump and dump, Solo spammer, Raid wave, Quiet market and Soak are available. They now drive Prices, IPOs, balances and fills in `/api/snapshot` and queued reply previews. E6 still owns each scenario's full market story and runtime soak verification. Solo spammer includes three initial B uses before its steady schedule. Soak uses a fixed 500-chatter/24-emote pool for 40 virtual minutes, including a ten-minute warm-up.
 
 For repeatable tests, use the same seed, settings, logical start time and run ordinal. Events use scheduled timestamps rather than timer arrival times. Persisted run ordinals prevent event-ID collisions across separate starts or app restarts. Settings, counters and simulator state remain server-side; the browser receives summaries rather than chat messages. Runs stay stopped after app restart.
 
