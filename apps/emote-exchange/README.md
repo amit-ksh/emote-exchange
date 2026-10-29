@@ -1,80 +1,140 @@
 # Emote Exchange
 
-A local play-money emote market for Twitch, displayed through an OBS browser source. K1–K7 and E1–E3 are verified. [E3](../../docs/verification/e3-runtime-and-recovery.md) connects real/simulated events and one-second ticks to the market, persists settlement/checkpoints atomically, restores after restart and queues command replies. Automated checks and a real Twitch buy from `amit1541` pass, including the persisted Holding and Twitch-acknowledged bot reply. The [E4 overlay](../../docs/verification/e4-overlay.md) is browser-verified; dashboard controls remain E5 in [the implementation plan](../../docs/implementation-plan.md).
+Chat's attention becomes a play-money market. Two different chatters using an emote can list it; viewers buy and sell shares while its share of chat attention moves the Price. One local Node process serves the streamer's dashboard and a transparent OBS overlay. Coins have no cash value.
 
-## Run the foundation
+The market, dashboard controls, greetings and Streaks, broadcaster Grants and Live analytics are implemented. Automated checks and browser verification are recorded in the [hardening report](../../docs/verification/h4-hardening.md). Actual OBS performance and the complete recorded live walkthrough remain submission checks.
 
-From the repository root with Node 24.12+ in the Node 24 LTS line and pnpm 11.25.0:
+![Market dashboard during the Pump and dump demo, showing Prices, Heat, session changes and holder counts.](screenshots/market-demo.jpg)
 
-```sh
-pnpm install
-pnpm dev:exchange
-```
+*Current production UI with simulated chat and Demo marked Running. These are demo results, not live-channel measurements.*
 
-Open [the dashboard](http://localhost:4100/) and [the overlay](http://127.0.0.1:4100/overlay). No credentials or `.env` are required. Click **Start demo** to drive the market with simulated chat and channel events. Market data is available in `/api/snapshot`; the overlay shows the market.
+## Try it in three steps
 
-For the built client:
+1. Open a terminal at the **repository root**. Use Node **24.12+ within major 24** and **pnpm 11.25.0**. The workspace provisions Node 24.22.1 for its scripts.
+2. Install and start:
+
+   ```sh
+   pnpm install --frozen-lockfile
+   pnpm dev:exchange
+   ```
+
+3. Open [the dashboard](http://localhost:4100/), click **Start demo**, then open [the overlay](http://127.0.0.1:4100/overlay). Within a few seconds Opening day begins listing emotes. Leave the terminal running; stop it with Ctrl+C.
+
+No `.env`, Twitch login or internet connection is required for the bundled demo. The app includes 24 original SVG emotes and local fonts. Optional public catalogs refresh in the background and cannot block startup. Installation needs registry access or an already populated package cache.
+
+For production, stop the development process, then run from the repository root:
 
 ```sh
 pnpm build
 pnpm start:exchange
 ```
 
-Keep the terminal running while using the app. Stop the development process before starting production on the same port.
+Both modes serve the same dashboard/overlay URLs. Only one process can use port 4100 at a time. Development reloads client edits; restart after server-code changes.
 
-Use **Test local connection** on the dashboard to verify a guarded action, a saved setting and a live SSE update. Successful checks survive restart. Local SQLite data lives in `apps/emote-exchange/data/emote-exchange.sqlite` by default; `DATA_DIR` overrides it, with relative paths resolved from the app directory. Data is git-ignored.
+## A quick demo tour
 
-## OBS
+Open **Demo**, choose a scenario and press **Start demo** (or **Start simulator** when Twitch is connected). Stop the current run before changing the scenario. Re-select a preset before starting it if you have navigated away from stopped demo controls.
 
-Add a Browser Source at `http://127.0.0.1:4100/overlay`, width 1920, height 1080. The page background is transparent. Keep shutdown-when-hidden and refresh-on-activation off. The overlay includes Tape, Chart, Board, Feed and queued Banners; SIM appears while simulation runs. Use ?motion=reduced for fades and static Tape pages, ?widgets=chart,board to choose widgets, and ?sound=off (sounds are P1).
+| Scenario | What to watch |
+|---|---|
+| Opening day | Twelve chatters, six Listings and light trading. The Overview shortcut uses this preset. |
+| Pump and dump | Early buys, concentrated attention, a Moon or Halt, then selling and falling attention over six minutes. Best started in a fresh market. |
+| Greeting streak | Twelve chatters across four short Streams in 48 seconds; ten keep their Streaks and two skip the third Stream. |
+| Solo spammer | Repeated Uses from one Chatter count less than Uses from a group. |
+| Raid wave | A simulated 40-viewer Raid and twenty first-time chatters receiving Raid Visas. |
+| Quiet market | Five minutes of sparse chat, followed by a closing Bell. |
+| Soak | Forty minutes at 50 messages/sec, with a fixed pool of 500 chatters and 24 emotes. |
+| Free play | Adjust rate, chatter count, seed and persona weights under Advanced. |
 
-## Setup checklist
+**Open bell**, **Close bell**, **Fake follow** and **Fake raid** are available while the simulator runs. A demo Open bell always begins a new Stream, so Streaks are easy to demonstrate. Close bell queues a local summary in **Chat → Would have said**. Stop generation with **Stop simulator**.
 
-The dashboard groups the connection, overlay URL, simulator and chat-output panels under an automatic checklist. **Connect Twitch** completes when broadcaster auth is connected. **Overlay connected** completes when at least one overlay browser receives SSE updates, including a normal preview tab; this does not prove OBS is configured. Closing the last overlay clears it.
+Demo and live events share the saved market. Simulation never sends messages to Twitch, even while connected. The SIM badge identifies an active simulator; stopping it preserves the simulated Traders and Holdings. To start fresh, use **Settings → Season reset** and type `RESET`; this clears the whole market, including live Portfolios. Use a fresh checkout for an isolated rehearsal if you want to preserve an existing market.
 
-**Go live** completes after Twitch reports `stream.online` and clears after `stream.offline`. It starts unknown after app startup, an account change or an EventSub gap, until another stream event arrives. Starting the app during an already-running stream may leave it waiting. Simulated bells never tick this live step. Without a current local connection, checklist steps wait until a fresh snapshot arrives; reconnects recover automatically, including after server restart.
+## Dashboard
 
-Use **Copy URL** in the overlay panel and paste into an OBS Browser source. Keep **Shutdown source when not visible** and **Refresh browser when scene becomes active** off. Enable **Control audio via OBS** when testing implemented sound cues. Check placement over bright and dark scenes at full and half scale.
+| Page | What it does |
+|---|---|
+| Overview / Setup | Broadcaster/bot connection, overlay URL, setup checklist and local connection test. |
+| Market | Heat, Price, session change and holder counts; Pause/Resume and confirmed Delist settlement. |
+| Traders | Search, Coins, Net Worth, live Streak, Freeze/Unfreeze and a confirmed Grant form with quick amounts. |
+| Settings | Starting Coins, Fee, trade cooldown, Heat half-life and maximum Grant; validated ranges, defaults and typed Season reset. |
+| Live | Messages/min, five-minute active chatters, participation, Trades/min, sparklines, economy, greetings, movers and recent Moments. |
+| Demo / Emotes / Chat / Diagnostics | Simulation controls, catalog samples, sent/dropped/local output, quiet mode and connection diagnostics. |
 
-## Twitch sign-in
+Live offers **Live / Sim / All** sources. It selects Live once eligible live activity arrives; Sim is labeled. Metrics update at most once a second while the page is open. Analytics counters reset on app restart; the saved market does not. Closing summaries compare with the median of recent completed live Streams after two exist. No viewer-count polling is implemented.
 
-Follow [the setup guide](../../docs/setup-guide.md) to register one confidential Twitch app. Copy `.env.example` to `.env` and keep secrets local. Restart, click **Connect Twitch** under Broadcaster, then sign in and approve the permissions. Connected accounts are validated and restored after restart. **Connect bot** is optional; each account has a Disconnect button.
+![Live analytics in Sim mode, with engagement cards, sparklines, reward accounting and market Moments.](screenshots/live-demo.jpg)
 
-After broadcaster login, the incoming-events panel should show **EventSub connected** and five **enabled** subscriptions. Type in your channel’s Twitch chat and check that **Live events** and **Chat messages** increase. The browser receives counts and fixed connection status; incoming chat text stays server-side. Counters reset on app restart. The dashboard shows the connection status. The simulator and market overlay work in either mode.
+Catalog search and Show more operate on approved **samples**, not a complete provider catalog browser. CSV, backup import/export, portfolio overlay cards and sound cues are not implemented.
 
-EventSub recovers from lost connections with backoff and recreates subscriptions. Twitch reconnect handoffs retain subscriptions without creating duplicates. Missed events during a lost connection cannot be replayed. For a local Twitch CLI mock, override both `EVENTSUB_WS_URL` and `EVENTSUB_SUBSCRIPTIONS_URL` as shown in [K3](../../docs/sprints/sprint-1-twitch-kit.md). Overrides accept only the official Twitch endpoints or explicit HTTP/WS loopback mock destinations.
+## Connect your Twitch channel
 
-## Chat output
+1. Register one application in the [Twitch developer console](https://dev.twitch.tv/console), with redirect URL **`http://localhost:4100/auth/callback`** and **Confidential** client type. See the [local setup guide](../../docs/setup-guide.md) for registration context.
+2. Copy `apps/emote-exchange/.env.example` to `apps/emote-exchange/.env`. Fill `TWITCH_CLIENT_ID` and `TWITCH_CLIENT_SECRET`; keep `.env` private and git-ignored. Restart the app.
+3. In **Setup**, connect the **Broadcaster** and approve `user:read:chat`, `user:write:chat` and `moderator:read:followers`. The optional **Bot** needs `user:write:chat`; use a separate account if you want to trade as the broadcaster, because the connected bot's messages are ignored as self-sent.
+4. Confirm **EventSub connected** and five enabled subscriptions. Send a normal message from another account in the connected channel and check that the live event/chat counters rise.
 
-Under **Test your chat connection**, click **Send test message** to post exactly “Emote Exchange connected” to your channel. The app selects the bot role when connected, otherwise the broadcaster. The **Sent and dropped** log records the outcome; HTTP acceptance alone does not count as a sent message. This is an explicit live action, separate from previews and simulator controls.
+Under **Chat**, **Send test message** explicitly sends “Emote Exchange connected” through the bot, otherwise the broadcaster. **Preview without sending** only adds a local preview. Quiet mode stops outbound sending and survives restart. Judge a live send by its **Sent** result, not just the button response.
 
-**Preview without sending** adds the same text to **Would have said**, even while Twitch is connected. All simulated output takes that path. Without a broadcaster connection, live sending is disabled and app output stays local. **Quiet mode** pauses live sending and discards waiting live messages; its setting survives app restart. A request already delivered to Twitch cannot be recalled.
+Twitch, 7TV, BTTV and FFZ channel/global catalogs are cached and refreshed every 30 minutes. For a 7TV channel emote, assign a set to the connected Twitch channel, add the emote to it and press **Refresh emotes**. Uploading artwork alone does not enable a channel emote. `Cached` means the last good set remains after a failed refresh; `No channel set` means that provider needs setup.
 
-The queue sends at most once per second and 18 times in any rolling 30 seconds, counting retry attempts too. Replies precede ambient output. Pending output expires after 30 seconds, duplicate text collapses, and diagnostics retain the latest 100 entries. Logs and counters reset on app restart; queued messages are not replayed. Twitch drop codes use a fixed safe vocabulary; unknown codes show `twitch_dropped`, never arbitrary provider error text. Incoming chat text is never added to this log.
+The **Go live** checklist waits for a Twitch stream event. After a restart or gap, an already-running stream may show Unknown until another stream event arrives. Simulated bells do not mark Twitch online. Twitch cannot replay messages missed during a disconnected interval.
 
-## Emote catalog
+## Chat commands
 
-**Your channel, in emotes** lists channel and global counts for Twitch, 7TV, BTTV and FFZ, with sample images. The total counts unique case-sensitive names after precedence: channel before global, then Twitch, 7TV, BTTV and FFZ. Bundled demo names are available alongside provider sets. Twitch emote fragments remain authoritative, including emotes absent from the catalog.
+Tickers use the emote name: exact case first, otherwise a unique case-insensitive match. A ticker must already be listed. Examples use bundled `DemoBull`; choose a current Listing from `!market` when testing live.
 
-Provider requests run in the background at startup and every 30 minutes. **Refresh emotes** requests an immediate update, useful after changing a channel set. **Cached** means a request failed and the last good set is still usable. **No channel set** covers an unconfigured provider or a 7TV profile without an active set. An empty configured set correctly shows zero. Channel caches are scoped to the connected broadcaster and are cleared when switching to another broadcaster; global caches remain reusable.
+| Who | Command | Result |
+|---|---|---|
+| Everyone | `!buy DemoBull 1` / `!buy DemoBull max` | Buy a whole number of shares, including the Fee. |
+| Everyone | `!sell DemoBull 1` / `!sell DemoBull all` | Sell immediately at the current Price. |
+| Everyone | `!portfolio` or `!pf` | Coins, Holdings and Net Worth; appends the Streak while alive. |
+| Everyone | `!market` / `!top` | Trading guidance and hottest tickers / top three Traders. |
+| Everyone | `!greetings good morning` | Claim once per open Stream and build a Streak. The words are never retained, echoed or projected by the app. |
+| Mod or broadcaster | `!market pause` / `!market resume` | Stop/resume Trades; Prices continue moving. |
+| Mod or broadcaster | `!delist DemoBull` | Pay holders their whole-Coin Holding value without a Fee and remove the Listing. |
+| Mod or broadcaster | `!freeze @name` / `!unfreeze @name` | Stop/restore one existing Trader's trading. |
+| Broadcaster only | `!grant @name 500` | Give an existing Trader Coins within the configured maximum. Mods cannot grant. |
 
-All 24 original SVG demo emotes load from `client/public/demo-emotes/` before any request. Names match the filename without `.svg`, for example `DemoBull` and `DemoMoon`. With no keys and no network, these assets support every simulator preset; optional public globals cannot delay startup.
+Replies share a budget of one per Trader per 20 seconds and a queue capped at one send/sec and 18 per rolling 30 seconds. A missing reply does not reverse an accepted Trade or reward: check the Feed or Traders page. Unknown commands are ignored so other bots can coexist.
 
-To use your own 7TV emotes, sign in to 7TV with the connected Twitch account, add emotes to a set assigned to that channel, then refresh our catalog. Uploading new artwork is separate from adding existing emotes to a channel set. The live K5 check observed the channel emote `BOB` after this setup.
+## Fairness and defaults
 
-## Simulator and demo mode
+- **Play money only:** no deposits, withdrawals or real-money redemption. Coins are integers capped at 1,000,000,000 per Trader; rewards record the amount actually credited.
+- **Attention moves Prices:** two distinct chatters can IPO at 100.00. Repeating an emote within 30 seconds earns progressively less Heat. Commands, app echoes and foreign shared-chat messages add no Heat. At most 24 Listings are active.
+- **Trades settle immediately:** default Fee 1% with a one-Coin minimum; buy debits round up and sell credits round down. Default cooldown three seconds; quantity cap 1,000,000. Insufficient Coins/shares, Pause, Freeze and Halts reject the Trade.
+- **Rewards create Coins:** default starting Coins 1,000; Stipend 10 per qualifying chat minute; Follow 200; Raid Visa 500 for first-time chatters within five minutes of a Raid. Coins are not conserved.
+- **Greetings:** 50 Coins initially, +10 per consecutive Stream, capped at 140 from Streak 10. A skipped whole Stream breaks the Streak. Live opening Bells less than two hours after the previous end continue the Stream; demo Open always starts a new one. Frozen Traders and closed Stream Sessions cannot claim.
+- **Grants:** default maximum 10,000 Coins, broadcaster-only, with durable request deduplication. No Fee, Trade, Heat or Price effect.
+- **Bells are ceremony:** ordinary trading remains available after Close bell; greetings require an open Stream Session. Mods can Pause, Freeze or Delist. A Season reset clears Portfolios and Streaks.
 
-In **Give it a dry run**, choose a scenario, seed, message rate (0.2–50 per second), chatter count (1–500) and persona weights, then click **Start demo** or **Start simulator**. The simulated counter climbs independently of the live EventSub counter. **Stop simulator** stops generation. Stop before changing settings. Persona weights are relative; scripted presets reserve some message slots for their own commands and emote patterns. Follow and raid generators add channel events alongside the configured chat-message rate.
+The [Exchange spec](../../docs/specs/emote-exchange.md) and [engine tests](test/) contain the formulas and boundary cases.
 
-While running, use **Fake follow**, **Fake raid**, **Open bell** and **Close bell** to inject simulated market events. Raid viewers must be 1–10,000. Follows/Raids update rewards and moments; Close bell produces the Session Summary under **Would have said**, including while Twitch is connected. Simulation never uses the live sender. Dashboard and overlay show **SIM** while the generator runs; Stop clears the badge.
+## OBS Browser Source
 
-Free play plus Opening day, Pump and dump, Solo spammer, Raid wave, Quiet market and Soak are available. They now drive Prices, IPOs, balances and fills in `/api/snapshot` and queued reply previews. E6 still owns each scenario's full market story and runtime soak verification. Solo spammer includes three initial B uses before its steady schedule. Soak uses a fixed 500-chatter/24-emote pool for 40 virtual minutes, including a ten-minute warm-up.
+| Setting | Value |
+|---|---|
+| URL | `http://127.0.0.1:4100/overlay` |
+| Width × height | **1920 × 1080** |
+| Background | Transparent |
+| Shutdown source when not visible | **Off** |
+| Refresh browser when scene becomes active | **Off** |
 
-For repeatable tests, use the same seed, settings, logical start time and run ordinal. Events use scheduled timestamps rather than timer arrival times. Persisted run ordinals prevent event-ID collisions across separate starts or app restarts. Settings, counters and simulator state remain server-side; the browser receives summaries rather than chat messages. Runs stay stopped after app restart.
+Tape, Chart, top-five Board, Feed, queued Banners and the simulator badge sit above your footage. Use `?motion=reduced` for reduced motion, `?widgets=chart,board` to select widgets, or combine them with `&`. `sound=off` is accepted, but this build has no sound playback.
 
-Without `.env`, the banner reads **Demo mode: simulated chat only**. The linked setup guide is served locally at `/setup-guide`; no internet is needed to read it or run the bundled demo.
+Check full size and 50% scale over bright and dark scenes. An overlay preview tab completes the dashboard's overlay-connected step; that does **not** verify OBS rendering or 60 fps. Browser screenshots and OBS performance are separate checks.
 
-## Checks and troubleshooting
+## Data, privacy and recovery
+
+SQLite lives at `apps/emote-exchange/data/emote-exchange.sqlite`; migrations run on startup. `DATA_DIR` overrides the location, with relative paths resolved from the app directory. Tokens stay server-only in this git-ignored database. Raw incoming chat stays server-side; public snapshots/SSE contain approved display data, not chat text or credentials. The server binds only to `127.0.0.1`; actions require same-origin requests and the `X-CTA` guard, with no CORS.
+
+Portfolios, settings, Stream numbers and Streaks survive restart. Socket connections, simulator generation, analytics counters and queued chat do not replay. Browsers reconnect automatically. During a gap they show the last state and disable unsafe dashboard actions. Short downtime decays Heat/impact without inventing rewards; downtime of ten minutes or more clears stale Heat/impact and retains Portfolios.
+
+Treat the entire data directory as private because it contains tokens. Season reset clears the whole market, not only simulation. There is no in-app backup/import feature.
+
+## Checks
+
+Run from the repository root:
 
 ```sh
 pnpm check
@@ -84,12 +144,30 @@ pnpm build
 pnpm smoke
 ```
 
-- Port busy: stop the other Emote Exchange process, or set matching `PORT` and `PUBLIC_ORIGIN` in `.env`.
-- Unsupported Node: use Node 24.12+ within major 24; native TypeScript needs no `tsx`.
-- Production client missing: run `pnpm build` first.
-- Overlay looks empty: start the simulator or let two chatters use the same emote to list it. The central canvas stays transparent.
-- Connection interrupted: the dashboard reports SSE reconnecting. Restart the local server if needed.
-- Development: client edits update through Vite HMR; restart the command after server edits.
-- Runtime mismatch: `pnpm install` provisions the project-local Node 24 runtime; check it with `pnpm exec node --version`.
+The suite currently contains **161 tests**, covering deterministic price fixtures, exact settlement, auth/protocol failures, guarded routes, greetings/Grants, analytics and a 40-minute virtual Soak. The Soak makes the full run take several minutes on some machines. Production smoke uses temporary data and checks actual process restart, SSE, demo behavior and preserved Portfolios.
 
-Architecture and behavior: [Twitch Kit spec](../../docs/specs/twitch-kit.md), [Exchange spec](../../docs/specs/emote-exchange.md), [ADRs](../../docs/adr/), [sprints](../../docs/sprints/README.md).
+## Troubleshooting
+
+| Symptom | What to check |
+|---|---|
+| Unsupported Node / TypeScript won't start | Use Node 24.12+ within major 24 and pinned pnpm. The frozen install above provisions the workspace runtime. |
+| Port busy | Stop the previous process. For a different port, set matching `PORT` and `PUBLIC_ORIGIN` in `.env` and register that exact callback. |
+| “Client build missing” | Run `pnpm build` before `pnpm start:exchange`. |
+| Empty overlay | Start Opening day, wait for two chatters to use an emote, then check Market. The center is intentionally transparent. |
+| No live chat / Unknown stream | Check broadcaster auth and five subscription states. A stream already online may not emit another opening event. Missed events are not replayed. |
+| Login fails / client becomes Public | This app needs a confidential client with a secret. Check both `.env` values and exact callback/public origin; restart after changes. |
+| Your own messages don't trade | Bot-account messages and recent app echoes are self-sent and ignored. Use another test account. Foreign shared-chat messages are ignored too. |
+| Command has no reply | Wait 20 seconds for that Trader's budget, check quiet mode and Chat diagnostics, and confirm the ticker is listed and not halted. |
+| Greeting pays nothing | It needs words, an open Stream Session, an unfrozen Trader and no previous claim this Stream. Another short live Session can continue the same Stream. |
+| Demo numbers remain after Stop | Stop halts generation; saved Portfolios remain. Review the Season reset warning before clearing them. |
+| Disconnect / Reconnecting | Keep the server running; SSE/EventSub reconnect automatically. For storage errors, stop, check writable space/directory access and restart. Failed writes deliver no success effects. |
+| Analytics empty after restart | Counters deliberately restart empty; open a Stream Session and generate activity. Saved Portfolios and Streaks remain. |
+| Provider emote missing | Enable it in the channel's active set and Refresh emotes. Names are case-sensitive; failures use cached data. |
+
+## Architecture and build evidence
+
+React/Vite render the dashboard and overlay. Hono serves loopback HTTP, native SQLite stores state, EventSub WebSocket receives events, Helix sends through one bounded queue, and SSE publishes explicit browser projections. Pure market/protocol engines take injected time and return effects; runtime code owns I/O. No chart library or hosted backend is required.
+
+- [Twitch Kit spec](../../docs/specs/twitch-kit.md) · [Exchange spec](../../docs/specs/emote-exchange.md) · [ADRs](../../docs/adr/) · [glossary](GLOSSARY.md).
+- Actual implementation/test evidence: [price fixtures](../../docs/verification/e0-behavior-fixtures.md), [runtime recovery and live buy](../../docs/verification/e3-runtime-and-recovery.md), [dashboard](../../docs/verification/e5-dashboard.md), [scenario/Soak results](../../docs/verification/e6-scenarios.md), [H4 hardening](../../docs/verification/h4-hardening.md) and [H6 README verification](../../docs/verification/h6-readme.md).
+- E7–E9 tests and visual verification are recorded in their individual Git commit bodies. H4 records the real production-smoke failure (`8 !== 7`), its fix and passing verification. These are actual Codex build artifacts; they do not claim hosted CI, a recorded OBS walkthrough or a completed submission.

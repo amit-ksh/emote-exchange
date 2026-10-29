@@ -6,16 +6,16 @@ This repository focuses on one Codex x TwitchCon hackathon entry. The plan is to
 
 ## Status
 
-The single-app plan, local foundation and K1–K7 are complete: private SQLite storage, guarded HTTP actions, bounded SSE, Twitch OAuth, incoming events, queued chat sending, cached emote catalogs and a seeded simulator with 24 original offline assets. Live reception, chat sending, 7TV and keyless offline simulation are verified. E1–E3's market rules, runtime, commands and recovery pass automated checks, and a real-account buy/persisted Holding/queued reply is verified. The E4 overlay is implemented and browser-verified; dashboard controls and full live/OBS walkthroughs remain in [the sprint plan](docs/sprints/README.md).
+K1–K7 and E0–E9 are implemented: Twitch integration, persistent market/trading, the overlay and dashboard controls, greetings/Streaks, broadcaster Grants and Live analytics. The 161-test suite, types, lint, production build and clean-folder smoke checks pass. [H4 hardening](docs/verification/h4-hardening.md) verifies guards, recovery, privacy and simulated transport failures. Full recorded live walkthroughs and actual OBS checks remain submission gates. Start with the [judge-facing app README](apps/emote-exchange/README.md).
 
 ## Quick start
 
-The [E0 numerical experiment](docs/verification/e0-behavior-fixtures.md) passes all five fixed targets. Run `pnpm experiment:market` to reproduce it. The [E1 engine](docs/verification/e1-market-engine.md) reproduces B1/B2/B3/B5 and passes a 24-Listing/500-Trader probe (`pnpm probe:market`). [E2](docs/verification/e2-trading-and-events.md) adds settlement/B4, rewards, Halts, bells and reset. [E3](docs/verification/e3-runtime-and-recovery.md) wires normalized chat, one-second ticks, SQLite recovery and queued command replies into the app. `/api/snapshot` includes the market; the Tape, Chart, Board, Feed, Banners and SIM overlay are implemented in [E4](docs/verification/e4-overlay.md). Dashboard controls remain E5.
+The [E0 numerical experiment](docs/verification/e0-behavior-fixtures.md) passes all five fixed targets. Run `pnpm experiment:market` to reproduce it. The [E1 engine](docs/verification/e1-market-engine.md) and [E2 trading](docs/verification/e2-trading-and-events.md) cover Prices, exact settlement and rewards; [E3](docs/verification/e3-runtime-and-recovery.md) records persistence and a real Twitch buy. [E4](docs/verification/e4-overlay.md), [E5](docs/verification/e5-dashboard.md) and [E6](docs/verification/e6-scenarios.md) record overlay, dashboard and scenario verification. The app README documents all shipped E7–E9 features and current limits.
 
 Use Node.js 24.12+ in the Node 24 LTS line and pnpm 11.25.0, then run from the repository root:
 
 ```sh
-pnpm install
+pnpm install --frozen-lockfile
 pnpm dev:exchange
 ```
 

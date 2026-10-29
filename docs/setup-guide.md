@@ -20,7 +20,7 @@ pnpm install
 pnpm dev:exchange
 ```
 
-Open [the dashboard](http://localhost:4100/) and [the overlay](http://127.0.0.1:4100/overlay). The foundation milestone serves these pages without Twitch credentials. Simulator controls and market behavior arrive in their own sprint tasks; use the app README to check what is currently implemented.
+Open [the dashboard](http://localhost:4100/), press **Start demo**, and open [the overlay](http://127.0.0.1:4100/overlay). The simulator, market, dashboard controls, greetings, Grants and Live analytics work without Twitch credentials. Follow the [app README](../apps/emote-exchange/README.md) for the complete demo tour and current limits.
 
 ## 2. Twitch accounts
 
@@ -47,7 +47,7 @@ Open [the Twitch developer console](https://dev.twitch.tv/console) as the broadc
 
 Create `apps/emote-exchange/.env` from `.env.example`. Copy the client ID and client secret directly into it, using the variable names in that file. Never paste secrets into Codex prompts, commit them, or put them in client code.
 
-Once auth is implemented, start the app and use **Connect Twitch** on the dashboard. The optional bot login is a separate authorization role in the same application. The callback URL and configured `PUBLIC_ORIGIN` must agree.
+Start the app and use **Connect Twitch** under **Setup**. The optional bot login is a separate authorization role in the same application. The callback URL and configured `PUBLIC_ORIGIN` must agree.
 
 For optional Twitch CLI experiments, register any additional callback URL required by the CLI explicitly, following its documentation.
 
