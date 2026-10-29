@@ -433,9 +433,10 @@
 }
 .ex-feed-trade > span:first-of-type {
   font: 500 28px / 30px var(--ex-mono);
-  flex: none;
+  flex: 1.2;
+  min-width: 0;
   max-width: none;
-  overflow: visible;
+  overflow: hidden;
   font-size: 28px;
 }
 .ex-banner {

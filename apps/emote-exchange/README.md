@@ -144,7 +144,7 @@ pnpm build
 pnpm smoke
 ```
 
-The suite currently contains **161 tests**, covering deterministic price fixtures, exact settlement, auth/protocol failures, guarded routes, greetings/Grants, analytics and a 40-minute virtual Soak. The Soak makes the full run take several minutes on some machines. Production smoke uses temporary data and checks actual process restart, SSE, demo behavior and preserved Portfolios.
+The suite currently contains **162 tests**, covering deterministic price fixtures, exact settlement, auth/protocol failures, guarded routes, greetings/Grants, analytics and a 40-minute virtual Soak. The Soak makes the full run take several minutes on some machines. Production smoke uses temporary data and checks actual process restart, SSE, demo behavior and preserved Portfolios.
 
 ## Troubleshooting
 

@@ -6,7 +6,7 @@ This repository focuses on one Codex x TwitchCon hackathon entry. The plan is to
 
 ## Status
 
-K1–K7 and E0–E9 are implemented: Twitch integration, persistent market/trading, the overlay and dashboard controls, greetings/Streaks, broadcaster Grants and Live analytics. The 161-test suite, types, lint, production build and clean-folder smoke checks pass. [H4 hardening](docs/verification/h4-hardening.md) verifies guards, recovery, privacy and simulated transport failures. Full recorded live walkthroughs and actual OBS checks remain submission gates. Start with the [judge-facing app README](apps/emote-exchange/README.md).
+K1–K7 and E0–E9 are implemented: Twitch integration, persistent market/trading, the overlay and dashboard controls, greetings/Streaks, broadcaster Grants and Live analytics. The 162-test suite, types, lint, production build and clean-folder smoke checks pass. [H4 hardening](docs/verification/h4-hardening.md) verifies guards, recovery, privacy and simulated transport failures. Full recorded live walkthroughs and actual OBS checks remain submission gates. Start with the [judge-facing app README](apps/emote-exchange/README.md).
 
 ## Quick start
 

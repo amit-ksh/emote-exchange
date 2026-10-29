@@ -387,7 +387,7 @@ function Feed({
                 </span>
                 <div className="ex-feed-trade">
                   <strong title={`${moment.side} ${moment.shares}`}>
-                    {moment.side?.toUpperCase()}
+                    {moment.side?.toUpperCase()} {compactCoins(moment.shares ?? 0)}
                   </strong>
                   <span title={moment.ticker}>{moment.ticker}</span>
                   <span>{priceLabel(moment.price ?? 1)}</span>

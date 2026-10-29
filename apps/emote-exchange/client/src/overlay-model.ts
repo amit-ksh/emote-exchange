@@ -316,8 +316,8 @@ export function readableChatColor(color: string): string {
         return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
       })
       .reduce((sum, c, index) => sum + c * [0.2126, 0.7152, 0.0722][index], 0);
-  // 82% near-black glass over pure-white footage is the brightest panel case.
-  const background = luminance([54, 54, 58]);
+  // rgba(34,34,34,.88) over white is the brightest redesigned panel case.
+  const background = luminance([61, 61, 61]);
   for (let i = 0; i < 20; i++) {
     if ((luminance(rgb) + 0.05) / (background + 0.05) >= 4.5) break;
     for (let c = 0; c < 3; c++) rgb[c] = Math.min(255, Math.ceil(rgb[c] + (255 - rgb[c]) * 0.15));

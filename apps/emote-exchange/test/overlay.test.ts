@@ -5,12 +5,41 @@ import {
   initialOverlayQueue,
   overlayOptions,
   priceLabel,
+  readableChatColor,
   readOverlayMarket,
   selectChart,
 } from "../client/src/overlay-model.ts";
 import type { MarketMoment } from "../src/engine/market.ts";
 import { marketProjection } from "../src/market-display.ts";
 import { market } from "./market-fixture.ts";
+
+test("Trader colors retain 4.5 contrast on the redesigned glass over white footage", () => {
+  const luminance = (rgb: number[]) =>
+    rgb.reduce((sum, channel, index) => {
+      const value = channel / 255;
+      return (
+        sum +
+        (value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4) *
+          [0.2126, 0.7152, 0.0722][index]
+      );
+    }, 0);
+  // rgba(34,34,34,.88) over white rounds to RGB 61,61,61.
+  const background = luminance([61, 61, 61]);
+  for (const original of [
+    "#a3a3a3",
+    "#000000",
+    "#ff0000",
+    "#00ff00",
+    "#0000ff",
+    "#ffffff",
+    "invalid",
+  ]) {
+    const result = readableChatColor(original);
+    const rgb = [1, 3, 5].map((index) => Number.parseInt(result.slice(index, index + 2), 16));
+    assert.ok((luminance(rgb) + 0.05) / (background + 0.05) >= 4.5, original);
+  }
+  assert.equal(readableChatColor("#ffffff"), "#ffffff");
+});
 
 test("Tape Price labels stay within six monospace characters at compact rounding boundaries", () => {
   for (const value of [1, 999.99, 1000, 9999.99, 99_999.99, 999_999.99, 999_999_999.99, 1e12]) {
