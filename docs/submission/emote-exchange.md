@@ -1,81 +1,77 @@
-# Submission kit: Emote Exchange
+# Emote Exchange — submission copy
 
-Working draft for the finished entry. Foundation setup alone does not support the product claims below. Replace placeholders and remove any feature that was not shipped and verified. Confirm form and video requirements against [the organizer brief](../hackathon-brief.md).
+Prepared October 29, 2026 from the shipped app. This file contains paste-ready description text and a factual evidence index. It is not a claim that a video or Devpost entry has been submitted.
 
 ## Entry fields
 
 - **Title:** Emote Exchange
-- **Tagline:** A live market where the stocks are your channel's emotes.
-- **Built with:** TypeScript, Node.js, React, Vite, Hono, SQLite, Twitch API, EventSub, OBS and OpenAI Codex; retain only technologies used in the final build.
-- **Repo:** `<repository URL>/tree/main/apps/emote-exchange`
-- **Video:** `<verified video URL>`
-- **Build session:** `<actual identifier from codex-sessions.md>`
+- **Tagline:** Chat attention becomes a live emote market.
+- **Repository:** https://github.com/amit-ksh/emote-exchange
+- **Setup:** https://github.com/amit-ksh/emote-exchange/blob/main/apps/emote-exchange/README.md
+- **Built with:** TypeScript, Node.js 24, React, Vite, Hono, SQLite, Twitch EventSub/Helix, Server-Sent Events, OpenAI Codex. The overlay is designed as an OBS Browser Source.
+- **Main Codex session ID:** `01a17e3d-2a72-7f72-8da3-a6350b3bfaaa`
+- **Video status:** An Emote Exchange recording is still required. The supplied YouTube link is titled “Ion launch video” and is not this project's demo.
 
-## Description draft
+## Inspiration
 
-### Inspiration
+Twitch emotes are a shared language. A burst of emote attention can become the story of a stream, but that story usually disappears as chat scrolls past. Emote Exchange turns it into a small community game: chat creates the Listings, attention moves the Prices, and viewers decide when to buy or sell with free play Coins.
 
-Emote spam is a shared language in Twitch chat. We wanted to turn that attention into a game: when viewers rally around an emote, its market moves with them.
+## What it does
 
-### What it does
+Two different chatters using the same recognized emote can trigger an IPO. Viewers trade whole shares using `!buy` and `!sell`, check `!portfolio`, and follow the top Traders. Prices follow each Listing's share of recent emote attention. Repeated Uses from one Chatter count progressively less, so one person cannot contribute the same Heat as a participating group.
 
-Emote Exchange turns channel emotes into Listings in a play-money market. Two chatters using the same emote can trigger an IPO. Viewers receive free play coins and trade with `!buy` and `!sell`. Prices follow current chat attention, with diminishing weight for repeated use by one chatter.
+A transparent overlay shows the Price tape, chart, leaderboard, Feed and queued IPO, Halt, Moon, Crash, Raid and Bell moments. The local dashboard provides setup, emote catalogs, simulation, market controls, Trader moderation and validated settings. Traders can claim greetings once per Stream and build Streaks; only the broadcaster can give Grants. The Live page separates live and simulated activity and reports engagement, trading participation, reward issuance and Fees.
 
-The intended overlay shows the ticker tape, a chart, leaderboard, trade feed and market moments such as IPOs and trading halts. The streamer controls the Session from a local dashboard. Demo mode demonstrates the market without Twitch credentials, with simulated activity clearly labeled.
+Portfolios, settings and Streaks survive restart. The app keeps Twitch credentials server-side and sends only explicit display projections to browsers. Chat output uses one bounded, rate-limited queue, and simulated effects never go to Twitch.
 
-Before submitting, replace this paragraph with a verified feature list covering the actual provider support, persistence, follow/raid behavior, closing summary and demo scenarios. Coins have no purchase, cash-out or real-money value.
+The keyless demo includes 24 original local SVG emotes and eight scenarios, including Opening day, Pump and dump, Raid wave and Greeting streak. Demo activity is labeled; it can run without Twitch credentials or internet access after installation. Coins have no purchase, withdrawal or real-money redemption.
 
-### How we built it with Codex
+## How it was built with Codex
 
-We reviewed the product rules, technical choices and task acceptance checks before implementation. The app separates pure market rules from the runtime that handles Twitch, persistence and browser delivery.
+The build began with repository documentation, domain vocabulary, architecture decisions and sprint acceptance checks. Codex helped turn the price formulas into executable fixed fixtures before the market engine was implemented. Those fixtures established that attention shifts could move a small-chat market without changing the initial conditions to make a test pass.
 
-Add concrete evidence of the workflows actually used:
+The market and EventSub protocol are pure state machines with injected time. The runtime owns SQLite transactions, network calls, clocks, the chat queue and browser delivery. That separation made it possible to test exact Coin settlement, stream restart boundaries, duplicate events and output provenance without requiring a live stream for every change.
 
-- A planning decision and why it improved the app: `<example>`.
-- A meaningful test written before the implementation: `<test and result>`.
-- A review finding that was fixed: `<issue and fix>`.
-- Additional sessions or delegated work, if used: `<contribution>`.
+A concrete review finding was that Pump and dump issued buys before the emotes had IPO'd, so none of the early buys could fill. Codex changed the scenario to establish Listings first, then buy, concentrate attention and sell. The engine-backed test now requires accepted Trades and the intended price story.
 
-The chosen architecture is a local Node 24 process with native TypeScript, built-in SQLite and WebSocket, Hono HTTP routes, React/Vite pages, and SSE updates to an OBS browser-source overlay. Twitch integration uses EventSub and the Helix API. State which parts are implemented and demonstrated in the submitted revision.
+During the final overlay review, a contrast regression test failed for the gray `#a3a3a3` on the redesigned glass over white footage. The correction matched the actual panel composite and the test passed. The same review restored visible share quantities in trade Feed rows, then checked the real overlay at 1920×1080 and half scale.
 
-### Challenges
+The current suite has 162 tests, including a forty-minute virtual Soak. Types, lint, tests, production build and smoke checks pass. The smoke test starts a real process, creates Trades, restarts during an open Session and compares saved Portfolios. These are local verification results; recorded Twitch/OBS walkthroughs and remote CI are tracked separately.
 
-`<One or two real problems, their tradeoffs and the implemented solutions. Examples: a lively market for a small chat, integer settlement, rate-limited replies, or reconnect recovery.>`
+## Challenges
 
-### Accomplishments and lessons
+**Making a market work for a small chat.** Relative attention, Heat decay and diminishing repeats create movement without needing thousands of messages. Fixed deterministic fixtures preserve the behavior targets.
 
-`<Specific observed outcome, test evidence and what the build taught us. Avoid unmeasured performance or originality claims.>`
+**Keeping play Coins exact.** Prices have two decimals, but Coins stay whole. Buy/sell settlement uses exact scaled arithmetic and a minimum Fee; credits saturate at the cap and record only what was applied.
 
-### What's next
+**Recovering without replaying the stream.** Durable business state is committed before success effects. Reconnects begin with fresh browser snapshots, while transient animations and outbound messages are not replayed after restart.
 
-`<A small list clearly labeled as future work, separate from shipped functionality.>`
+## Accomplishments and lessons
 
-## Video script (editing target 2:45)
+The same normalized input model drives Twitch and the simulator, so the offline demo exercises the actual market rather than a separate animation. Testing at engine, persistence, HTTP and transport boundaries made subtle timing and provenance rules reviewable. Finishing the dashboard and failure states mattered as much as the market formula: the streamer needs to know what happened and what to do next.
 
-| Time | Shot | Story |
-|---|---|---|
-| 0:00–0:10 | Real chat uses an original emote and its chart moves. | What if chat's emotes were a market? |
-| 0:10–0:30 | Tape, chart, leaderboard and trade feed. | Explain attention-driven prices and play coins. |
-| 0:30–1:20 | A real viewer buys, coordinated chat activity moves price, and a sale changes holdings. Add visibly labeled simulation only when needed. | Show cause and effect rather than listing features. |
-| 1:20–1:35 | Closing bell and the implemented Session summary. | Show a clear end to the live walkthrough. |
-| 1:35–2:20 | Actual plan, a useful red-to-green test, a fixed review finding and build-session evidence. | Explain the concrete role Codex played. |
-| 2:20–2:40 | Local dashboard, OBS URL and offline demo. | Show the verified setup steps. |
-| 2:40–2:45 | Title card. | Emote Exchange, built with Codex for Twitch. |
+## What's next
 
-Adjust the script to the finished app and the confirmed duration limit. Do not stage a missing feature or test outcome.
+Optional future work includes portfolio overlay cards, sound cues, CSV and backup import/export, and longer historical charts. These features are not part of the submitted build's current claims.
 
-## Recording and submission checks
+## Evidence index
 
-- [ ] Real Twitch behavior is visible; simulated activity uses `sim_` names and a SIM badge.
-- [ ] The images, emotes and sound assets have checked permissions.
-- [ ] Captions are readable and the video plays from a logged-out browser.
-- [ ] Every product claim matches the submitted revision and verification evidence.
-- [ ] Form fields, repository access, duration and session information match organizer requirements.
-- [ ] All placeholders are removed before submission.
+| Claim | Evidence |
+|---|---|
+| Price feasibility before engine implementation | [E0 fixtures](../verification/e0-behavior-fixtures.md), [experiment source](../../scripts/experiments/behavior-fixtures.mjs) |
+| Actual Twitch buy, persisted Holding and queued reply | [E3 live verification](../verification/e3-runtime-and-recovery.md) |
+| Scenario review finding and repair | [E6 verification](../verification/e6-scenarios.md) |
+| Contrast red/green result and visible Feed quantity repair | [H2 verification](../verification/h2-bugbash.md), [bug bash](bugbash.md) |
+| Recovery, guards, privacy and clean-folder setup | [H4 hardening](../verification/h4-hardening.md) |
+| Current UI and setup | [README](../../apps/emote-exchange/README.md) |
+| Main build session | [Session record](codex-sessions.md) |
 
-## Screenshots
+## Organizer requirements checked October 29
 
-1. The overlay during a real market interaction.
-2. Twitch chat showing a trade command and queued reply.
-3. The dashboard and actual connection/setup state.
-4. A meaningful Codex plan or test/review result.
+[Official rules](https://twitchcon-codex.devpost.com/rules) and [overview](https://twitchcon-codex.devpost.com/) require an accessible repository, description, main build-session ID and a YouTube video under three minutes showing Twitch functionality and Codex use. English materials are required unless accompanied by translations. The repository can remain private if the organizer receives the required access. The entrant must personally confirm eligibility and acceptance of the official rules.
+
+The deadline is November 2, 2026 at 2 PM Pacific Time; the repository's earlier internal target remains November 2 at 8 PM IST. The FAQ has an inconsistent UTC conversion, so do not use its UTC sentence to delay submission. No entry or linked material should be treated as final before its access, video and submission gates pass.
+
+## Remaining publishing fields
+
+A correct Emote Exchange video URL, judge access to the private repository, and the actual Devpost project/confirmation URL are still required. These are deliberately recorded as missing rather than represented by invented links. [Release status](release-status.md) tracks the evidence and account-dependent gates.
