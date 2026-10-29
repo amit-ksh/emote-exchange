@@ -19,25 +19,27 @@ const port = address.port;
 await new Promise((resolve) => reservation.close(resolve));
 const origin = `http://127.0.0.1:${port}`;
 const dataDir = mkdtempSync(join(tmpdir(), "emote-exchange-smoke-"));
-const child = spawn(process.execPath, ["src/server.ts"], {
-  cwd: fileURLToPath(new URL("../apps/emote-exchange/", import.meta.url)),
-  env: {
-    ...process.env,
-    PORT: String(port),
-    PUBLIC_ORIGIN: origin,
-    DATA_DIR: dataDir,
-    NODE_ENV: "production",
-    TWITCH_CLIENT_ID: "",
-    TWITCH_CLIENT_SECRET: "",
-  },
-  stdio: "ignore",
-});
-let spawnError;
-child.on("error", (error) => {
-  spawnError = error;
-});
-
-try {
+const launch = () =>
+  spawn(process.execPath, ["src/server.ts"], {
+    cwd: fileURLToPath(new URL("../apps/emote-exchange/", import.meta.url)),
+    env: {
+      ...process.env,
+      PORT: String(port),
+      PUBLIC_ORIGIN: origin,
+      DATA_DIR: dataDir,
+      NODE_ENV: "production",
+      TWITCH_CLIENT_ID: "",
+      TWITCH_CLIENT_SECRET: "",
+    },
+    stdio: "ignore",
+  });
+let child;
+async function start() {
+  child = launch();
+  let spawnError;
+  child.on("error", (error) => {
+    spawnError = error;
+  });
   let ready = false;
   for (let attempt = 0; attempt < 100; attempt += 1) {
     if (spawnError) throw spawnError;
@@ -52,6 +54,21 @@ try {
     }
   }
   assert.ok(ready, "Production server must become ready within 10 seconds.");
+}
+async function stop() {
+  if (child && child.exitCode === null && child.signalCode === null) {
+    const exited = once(child, "exit");
+    child.kill();
+    await Promise.race([exited, delay(3000)]);
+    if (child.exitCode === null && child.signalCode === null) {
+      child.kill("SIGKILL");
+      await exited;
+    }
+  }
+}
+
+try {
+  await start();
 
   for (const route of ["/", "/overlay"]) {
     const response = await fetch(`${origin}${route}`);
@@ -68,7 +85,16 @@ try {
   assert.equal(response.headers.get("cache-control"), "no-store");
   const { catalog, seq, simulator, ...snapshot } = await response.json();
   assert.equal(simulator.running, false);
-  assert.equal(simulator.scenarios.length, 7);
+  assert.deepEqual(simulator.scenarios.map((scenario) => scenario.id).sort(), [
+    "free-play",
+    "greeting-streak",
+    "opening-day",
+    "pump-and-dump",
+    "quiet-market",
+    "raid-wave",
+    "soak",
+    "solo-spammer",
+  ]);
   assert.ok((await (await fetch(`${origin}/setup-guide`)).text()).includes("Twitch"));
   assert.ok(Number.isSafeInteger(seq) && seq >= 0);
   assert.equal(catalog.ready, true);
@@ -233,15 +259,54 @@ try {
   );
   assert.equal((await action("stop")).status, 200);
   assert.equal((await (await fetch(`${origin}/api/snapshot`)).json()).simulatorRunning, false);
+
+  // Exercise durable Portfolios across an actual process restart, not only a runtime rebuild.
+  assert.equal(
+    (
+      await action("start", {
+        seed: 42,
+        scenario: "pump-and-dump",
+        rate: 6,
+        chatters: 15,
+        mix: { plain: 10, emote: 90, follow: 0, raid: 0 },
+      })
+    ).status,
+    200,
+  );
+  const tradeDeadline = Date.now() + 5000;
+  let traded;
+  do {
+    traded = await (await fetch(`${origin}/api/snapshot`)).json();
+    if (traded.market.traders.some((row) => row.holdings.length > 0)) break;
+    await delay(100);
+  } while (Date.now() < tradeDeadline);
+  assert.ok(traded.market.traders.some((row) => row.holdings.length > 0));
+  assert.equal((await action("stop")).status, 200);
+  const beforeRestart = await (await fetch(`${origin}/api/snapshot`)).json();
+  assert.equal(beforeRestart.market.session.closedAt, null);
+  await stop();
+  await start();
+  const afterRestart = await (await fetch(`${origin}/api/snapshot`)).json();
+  const portfolios = (packet) =>
+    packet.market.traders
+      .map(({ userId, coins, holdings }) => ({ userId, coins, holdings }))
+      .sort((a, b) => a.userId.localeCompare(b.userId));
+  assert.deepEqual(portfolios(afterRestart), portfolios(beforeRestart));
+  assert.deepEqual(afterRestart.market.session, beforeRestart.market.session);
+  assert.equal(afterRestart.simulatorRunning, false);
+  assert.equal(afterRestart.connectionChecks, 1);
+  assert.deepEqual(afterRestart.chatOut.logs, [], "outbound messages are never replayed");
+  const reconnected = await fetch(`${origin}/events?client=overlay`);
+  const reader = reconnected.body.getReader();
+  const frame = new TextDecoder().decode((await reader.read()).value);
+  assert.match(frame, /^event: snapshot/);
+  const restored = JSON.parse(frame.split("\n")[1].slice(6));
+  assert.deepEqual(portfolios(restored), portfolios(beforeRestart));
+  await reader.cancel();
   console.log(
-    "Production smoke passed: dashboard, overlay client lifecycle, demo assets, simulator counters/previews, persisted action, SSE and guards.",
+    "Production smoke passed: dashboard, overlay lifecycle, demo assets, simulator, SSE/guards and open-Session process restart with Portfolios preserved and no output replay.",
   );
 } finally {
-  if (child.exitCode === null && child.signalCode === null) {
-    const exited = once(child, "exit");
-    child.kill();
-    await Promise.race([exited, delay(3000)]);
-    if (child.exitCode === null && child.signalCode === null) child.kill("SIGKILL");
-  }
+  await stop();
   rmSync(dataDir, { recursive: true, force: true, maxRetries: 3, retryDelay: 100 });
 }
