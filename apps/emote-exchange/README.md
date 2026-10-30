@@ -2,7 +2,7 @@
 
 Chat's attention becomes a play-money market. Two different chatters using an emote can list it; viewers buy and sell shares while its share of chat attention moves the Price. One local Node process serves the streamer's dashboard and a transparent OBS overlay. Coins have no cash value.
 
-The market, dashboard controls, greetings and Streaks, broadcaster Grants and Live analytics are implemented. Automated checks and browser verification are recorded in the [hardening report](../../docs/verification/h4-hardening.md). Actual OBS performance and the complete recorded live walkthrough remain submission checks.
+The market, dashboard controls, greetings and Streaks, broadcaster Grants and Live analytics are implemented. Automated checks and browser verification are recorded in the [hardening report](../../docs/verification/h4-hardening.md); actual OBS full/half-scale captures and measurements are in the [OBS report](../../docs/verification/h3-obs.md). Complete recorded live walkthroughs remain submission checks.
 
 ![Market dashboard during the Pump and dump demo, showing Prices, Heat, session changes and holder counts.](screenshots/market-demo.jpg)
 
@@ -116,11 +116,17 @@ The [Exchange spec](../../docs/specs/emote-exchange.md) and [engine tests](test/
 |---|---|
 | URL | `http://127.0.0.1:4100/overlay` |
 | Width × height | **1920 × 1080** |
+| Use custom frame rate | **On, 60 FPS**; set OBS Video FPS to **60** too |
 | Background | Transparent |
+| Source context menu → Blending Method | **SRGB Off** |
 | Shutdown source when not visible | **Off** |
 | Refresh browser when scene becomes active | **Off** |
 
 Tape, Chart, top-five Board, Feed, queued Banners and the simulator badge sit above your footage. Use `?motion=reduced` for reduced motion, `?widgets=chart,board` to select widgets, or combine them with `&`. `sound=off` is accepted, but this build has no sound playback.
+
+Use the Browser Source's **Blending Method → SRGB Off** so the translucent panels keep their browser appearance. In the OBS 33 bright-scene check, Default blending made the backing visibly lighter; SRGB Off restored the intended dark glass. This is a source setting, separate from OBS's global video color settings.
+
+![Actual 1080p OBS Browser Source over a bright QA pattern, with a simulated opening bell and market panels.](screenshots/overlay-obs.png)
 
 Check full size and 50% scale over bright and dark scenes. An overlay preview tab completes the dashboard's overlay-connected step; that does **not** verify OBS rendering or 60 fps. Browser screenshots and OBS performance are separate checks.
 

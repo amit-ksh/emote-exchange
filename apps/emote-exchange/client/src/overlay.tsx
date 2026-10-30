@@ -369,6 +369,7 @@ function Feed({
     <section className="ex-feed" aria-label="Recent market events">
       <h2 className="ex-label">Recent activity</h2>
       <div>
+        {moments.length === 0 && <p className="ex-feed-empty">Waiting for market activity.</p>}
         {moments.map((moment) => (
           <article
             key={moment.id}
@@ -456,7 +457,7 @@ function bannerCopy(moment: MarketMoment, now: number) {
       return {
         label: "RAID INCOMING",
         title: `${compactCoins(moment.viewers ?? 0)} viewers`,
-        detail: `${moment.name ?? "A channel"} arrived. New chatters get bonus Coins with a Raid Visa.`,
+        detail: "New chatters get a Raid Visa bonus.",
       };
     case "DELIST":
       return {
@@ -520,7 +521,9 @@ function Banner({
       <div className="ex-banner-copy">
         <p className="ex-label">{copy.label}</p>
         <h2 title={copy.title}>{copy.title}</h2>
-        <p className="ex-banner-detail">{copy.detail}</p>
+        <p className="ex-banner-detail" title={copy.detail}>
+          {copy.detail}
+        </p>
       </div>
       <span
         className="ex-banner-progress"
