@@ -10,7 +10,7 @@ Updated October 29, 2026. This is a preparation record, not a submitted-entry co
 | Remote CI | [D2 remote result](../verification/d2-remote-ci.md): Ubuntu and Windows green at `45d2528` |
 | OBS checks | [H3 actual OBS report](../verification/h3-obs.md): full/half, bright/dark, motion, empty/reconnect and numeric-boundary captures; source blending and layout fixes |
 | H1 / H5 live recordings | Pending two viewer accounts, a real follow and recorded restart/closing summary |
-| V1 / V2 project video | Actual Emote Exchange footage, edit, captions, upload and logged-out playback pending; supplied YouTube URL is unrelated |
+| V1 / V2 project video | [Captioned local demo](../verification/v1-demo.md) recorded, edited and committed; final real Twitch/build shots and hosting remain |
 | D1 entry text | [Prepared description](emote-exchange.md) and [actual main session](codex-sessions.md); final video URL and screenshot selection remain |
 | D2 judge access | Private repository; organizer access has not been verified |
 | D3 / D4 submission | Not submitted; entrant review, final confirmation and revision/tag remain |

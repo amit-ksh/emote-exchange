@@ -1,0 +1,39 @@
+1
+00:00:00,000 --> 00:00:06,000
+Emote Exchange
+
+2
+00:00:06,000 --> 00:00:14,000
+Chat attention becomes a market.
+
+3
+00:00:14,000 --> 00:00:22,000
+Bells, Prices and a top-five Trader board.
+
+4
+00:00:22,000 --> 00:00:28,000
+SIM marks every simulated run.
+
+5
+00:00:28,000 --> 00:00:38,000
+Viewers buy and sell whole shares.
+
+6
+00:00:38,000 --> 00:00:47,000
+Heat follows emote attention.
+
+7
+00:00:47,000 --> 00:00:56,000
+Halts and market moments queue one at a time.
+
+8
+00:00:56,000 --> 00:01:08,000
+The actual overlay at 50% scale.
+
+9
+00:01:08,000 --> 00:01:20,000
+Reduced motion swaps movement for fades.
+
+10
+00:01:20,000 --> 00:01:28,000
+Emote Exchange · Local demo

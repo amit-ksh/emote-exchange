@@ -10,7 +10,7 @@ Prepared October 29, 2026 from the shipped app. This file contains paste-ready d
 - **Setup:** https://github.com/amit-ksh/emote-exchange/blob/main/apps/emote-exchange/README.md
 - **Built with:** TypeScript, Node.js 24, React, Vite, Hono, SQLite, Twitch EventSub/Helix, Server-Sent Events, OpenAI Codex. The overlay is designed as an OBS Browser Source.
 - **Main Codex session ID:** `01a17e3d-2a72-7f72-8da3-a6350b3bfaaa`
-- **Video status:** An Emote Exchange recording is still required. The supplied YouTube link is titled “Ion launch video” and is not this project's demo.
+- **Video status:** An [88-second captioned local demo](media/emote-exchange-demo.mp4) is recorded and committed. It uses simulated OBS footage. The final project video still needs real Twitch interaction, actual Codex build footage and YouTube hosting. The supplied “Ion launch video” link is unrelated.
 
 ## Inspiration
 
