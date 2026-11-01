@@ -1,4 +1,14 @@
-# Local demo assets
+# Video assets
+
+## Narrated Twitch demo — November 1
+
+[emote-exchange-devpost.mp4](emote-exchange-devpost.mp4) is the completed **2:05** export: actual Twitch chat commands, dashboard and overlay; labeled SIM footage; actual repository planning/source/review records; ElevenLabs George narration and burned English captions. H.264/yuv420p, 1920×1080 at 30 FPS, AAC stereo 48 kHz, fast-start MP4. No review watermark, music or desktop audio. [SRT captions](emote-exchange-devpost.srt), [edit decisions](devpost-edit.json), [poster](devpost-poster.png).
+
+SHA-256: `66a42c05ae4056e82cc8a7794e800923cead2e23e682dc95c415d5b0afd9cc5c` (7,885,050 bytes).
+
+Use the title and credits in [publishing notes](../video-publishing.md). Narration was generated on an ElevenLabs **free plan**: non-commercial use only, with `elevenlabs.io` or `11.ai` in the publishing title. A commercial license is not claimed; the repository's MIT license does not grant commercial rights to this narration. The export has not been uploaded to YouTube or submitted to Devpost. [Full verification](../../verification/v1-live-video.md).
+
+## Earlier simulated demo — October 29
 
 `emote-exchange-demo.mp4` is an 88-second simulated local demo, 1920×1080 at 60 FPS, H.264/yuv420p, fast-start MP4, no audio. English captions are burned in; `emote-exchange-demo.srt` provides companion timed text. This is not the final hackathon video or a real Twitch walkthrough.
 

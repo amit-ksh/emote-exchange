@@ -1,0 +1,138 @@
+1
+00:00:00,000 --> 00:00:02,866
+Twitch emotes are a
+community's shared language.
+
+2
+00:00:03,367 --> 00:00:07,464
+Emote Exchange turns that attention
+into a game the whole chat can play:
+
+3
+00:00:07,883 --> 00:00:12,027
+a live emote market, using free
+play Coins with no cash value.
+
+4
+00:00:12,376 --> 00:00:17,019
+The streamer runs one local app. From
+this dashboard, they connect Twitch,
+
+5
+00:00:17,055 --> 00:00:20,351
+manage the market, and add
+a browser source to OBS.
+
+6
+00:00:20,700 --> 00:00:25,645
+The overlay shows Prices, top Traders,
+recent activity and market moments.
+
+7
+00:00:25,936 --> 00:00:28,292
+Here is the real Twitch
+connection in action.
+
+8
+00:00:28,583 --> 00:00:31,868
+A viewer buys two shares by
+typing a command in chat.
+
+9
+00:00:32,218 --> 00:00:36,674
+The app processes the Trade, saves
+the Holding, updates the Feed, and
+
+10
+00:00:36,699 --> 00:00:40,610
+replies through the bot. The portfolio
+command reports the viewer's
+
+11
+00:00:40,635 --> 00:00:44,825
+Coins and shares. Selling settles
+the Trade and updates the balance
+
+12
+00:00:44,850 --> 00:00:49,980
+again. These are actual chat messages
+and app responses, recorded together.
+
+13
+00:00:50,330 --> 00:00:53,869
+Two different chatters using a
+recognized emote can list it.
+
+14
+00:00:54,219 --> 00:00:58,153
+Prices follow its share of recent chat
+attention, with diminishing credit
+
+15
+00:00:58,178 --> 00:01:02,913
+for repeated Uses from one person. The
+streamer can pause trading, moderate
+
+16
+00:01:02,938 --> 00:01:07,209
+Traders and give Grants. Greetings
+reward returning participation with
+
+17
+00:01:07,234 --> 00:01:11,632
+Streaks. Live analytics separates
+real chat from simulation.
+
+18
+00:01:11,982 --> 00:01:16,486
+For larger crowds, this clearly labeled
+SIM run exercises the same engine.
+
+19
+00:01:16,986 --> 00:01:21,210
+The keyless demo works without Twitch
+credentials, and simulated activity
+
+20
+00:01:21,235 --> 00:01:25,158
+never sends messages to Twitch.
+Codex helped build the project from
+
+21
+00:01:25,183 --> 00:01:27,573
+its specifications and acceptance checks.
+
+22
+00:01:27,923 --> 00:01:32,530
+The market engine is pure: time comes
+in, and persistence, display and
+
+23
+00:01:32,555 --> 00:01:37,278
+reply effects come out. A real review
+found that simulated buys happened
+
+24
+00:01:37,303 --> 00:01:41,760
+before emotes were listed. The scenario
+was corrected to establish Listings
+
+25
+00:01:41,785 --> 00:01:47,090
+first. Automated tests cover settlement,
+recovery and output isolation;
+
+26
+00:01:47,683 --> 00:01:52,569
+Windows and Ubuntu CI both pass.
+Emote Exchange makes chat attention
+
+27
+00:01:52,594 --> 00:01:56,877
+visible, gives viewers a shared game,
+and keeps the streamer in control.
+
+28
+00:01:57,296 --> 00:02:01,567
+One local process, a Twitch
+chat, and an OBS browser source.
