@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { readFileSync } from "node:fs";
+import type { Store } from "@emote-exchange/twitch-kit";
 import {
   createChatOut,
   createEmoteCatalog,
@@ -30,6 +31,8 @@ interface ExchangeRuntimeOptions {
   wsUrl?: string;
   subscriptionsUrl?: string;
   marketAutoTick?: boolean;
+  hosting?: { ownerLogin: string };
+  store?: Store;
 }
 
 export function createExchangeRuntime({
@@ -42,8 +45,10 @@ export function createExchangeRuntime({
   wsUrl,
   subscriptionsUrl,
   marketAutoTick,
+  hosting,
+  store: providedStore,
 }: ExchangeRuntimeOptions = {}) {
-  const store = openStore({ filename, migrations: marketMigrations });
+  const store = providedStore ?? openStore({ filename, migrations: marketMigrations });
   const cleanup: (() => void)[] = [];
   try {
     const settings = store.settings({ connectionChecks: 0, quietMode: false, simulationRuns: 0 });
@@ -56,6 +61,7 @@ export function createExchangeRuntime({
       clientId,
       clientSecret,
       publicOrigin,
+      ownerLogin: hosting?.ownerLogin,
       now,
       onChange: () => {
         syncAuth();
@@ -100,13 +106,19 @@ export function createExchangeRuntime({
     });
     cleanup.push(() => market.close());
     syncMarketCatalog = () => market.setCatalog(catalog.entries());
-    const receiveEvent = market.receive;
+    const receiveEvent: typeof market.receive = (event) => {
+      const result = market.receive(event);
+      if (result instanceof Promise) void result.catch(() => {});
+      return result;
+    };
     const simulator = createSimulator({
       emotes: demoEmotes,
       scenarios: exchangeScenarios,
       now,
       initialRun: settings.get("simulationRuns"),
-      onRun: (run) => settings.set("simulationRuns", run),
+      onRun: (run) => {
+        void Promise.resolve(settings.set("simulationRuns", run)).catch(() => {});
+      },
       onEvent: receiveEvent,
       onChange: () => publishState(),
     });
@@ -136,7 +148,7 @@ export function createExchangeRuntime({
       mode: "demo",
       phase: "foundation",
       simulatorRunning: false,
-      overlayUrl: `http://127.0.0.1:${port}/overlay`,
+      overlayUrl: hosting ? `${publicOrigin}/overlay` : `http://127.0.0.1:${port}/overlay`,
       connectionChecks: settings.get("connectionChecks"),
       auth: auth.publicState(),
       eventsub: eventsub.publicState(),
@@ -159,24 +171,49 @@ export function createExchangeRuntime({
         return () => clearTimeout(timer);
       },
     });
-    const app = createHttpApp({ port, bus });
+    // OBS receives only the market projection, never account status or chat-out diagnostics.
+    const overlayDisplay = () => ({
+      app: "Emote Exchange",
+      simulatorRunning: simulator.publicState().running,
+      market: market.display(),
+    });
+    const overlayBus = hosting
+      ? createOverlayBus({
+          initial: overlayDisplay(),
+          now,
+          onClientsChange: () => publishState(),
+          schedule(callback, delayMs) {
+            const timer = setTimeout(callback, delayMs);
+            timer.unref();
+            return () => clearTimeout(timer);
+          },
+        })
+      : undefined;
+    cleanup.push(() => overlayBus?.close());
+    const app = createHttpApp({
+      port,
+      bus,
+      overlayBus,
+      publicOrigin: hosting ? publicOrigin : undefined,
+      authorizeDashboard: auth.authorizeDashboard,
+      dashboardSignal: auth.dashboardSignal,
+    });
     const analyticsFeed = createAnalyticsFeed({ now, snapshot: market.analytics });
     cleanup.push(() => analyticsFeed.close());
-    app.get(
-      "/api/analytics/events",
-      (context) =>
-        new Response(
-          context.req.method === "HEAD" ? null : analyticsFeed.connect(context.req.raw.signal),
-          {
-            headers: {
-              "Content-Type": "text/event-stream",
-              "Cache-Control": "no-store",
-              Connection: "keep-alive",
-              "X-Accel-Buffering": "no",
-            },
-          },
-        ),
-    );
+    app.get("/api/analytics/events", (context) => {
+      const sessionSignal = auth.dashboardSignal(context.req.header("Cookie"));
+      const signal = sessionSignal
+        ? AbortSignal.any([context.req.raw.signal, sessionSignal])
+        : context.req.raw.signal;
+      return new Response(context.req.method === "HEAD" ? null : analyticsFeed.connect(signal), {
+        headers: {
+          "Content-Type": "text/event-stream",
+          "Cache-Control": "no-store",
+          Connection: "keep-alive",
+          "X-Accel-Buffering": "no",
+        },
+      });
+    });
     cleanup.push(() => bus.close());
     auth.mount(app);
     app.get("/setup-guide", (context) =>
@@ -184,7 +221,7 @@ export function createExchangeRuntime({
     );
     const display = (): FoundationDisplay => ({
       ...projection,
-      overlayClients: bus.clientCounts().overlay,
+      overlayClients: (overlayBus ?? bus).clientCounts().overlay,
       mode: auth.publicState().broadcaster.connected ? "live" : "demo",
       connectionChecks: settings.get("connectionChecks"),
       auth: auth.publicState(),
@@ -195,11 +232,16 @@ export function createExchangeRuntime({
       simulator: simulator.publicState(),
       market: market.display(),
     });
-    publishMarket = (moments) =>
+    publishMarket = (moments) => {
+      overlayBus?.publish(
+        overlayDisplay(),
+        moments.map((moment) => ({ ...moment })),
+      );
       bus.publish(
         display(),
         moments.map((moment) => ({ ...moment })),
       );
+    };
     publishState = () => publishMarket([]);
     app.post("/api/market/grant", async (context) => {
       const body: unknown = await context.req.json().catch(() => null);
@@ -215,7 +257,7 @@ export function createExchangeRuntime({
       )
         return context.json({ error: "Choose a Trader and a valid whole-Coin amount." }, 400);
       try {
-        market.receive({
+        await market.receive({
           type: "Grant",
           id: `dashboard:${body.requestId}`,
           userId: body.userId,
@@ -238,7 +280,7 @@ export function createExchangeRuntime({
         return context.json({ error: "Choose a valid market action." }, 400);
       const cause = { id: `dashboard:${randomUUID()}`, origin: "sim" as const };
       if (body.type === "Pause" && "value" in body && typeof body.value === "boolean")
-        market.receive({ type: "Pause", ...cause, value: body.value });
+        await market.receive({ type: "Pause", ...cause, value: body.value });
       else if (
         body.type === "Freeze" &&
         "userId" in body &&
@@ -247,16 +289,16 @@ export function createExchangeRuntime({
         typeof body.value === "boolean" &&
         market.display().traders.some((row) => row.userId === body.userId)
       )
-        market.receive({ type: "Freeze", ...cause, userId: body.userId, value: body.value });
+        await market.receive({ type: "Freeze", ...cause, userId: body.userId, value: body.value });
       else if (
         body.type === "Delist" &&
         "ticker" in body &&
         typeof body.ticker === "string" &&
         market.display().listings.some((row) => row.ticker === body.ticker)
       )
-        market.receive({ type: "Delist", ...cause, ticker: body.ticker });
+        await market.receive({ type: "Delist", ...cause, ticker: body.ticker });
       else if (body.type === "Reset" && "confirmation" in body && body.confirmation === "RESET")
-        market.receive({ type: "Reset", ...cause, confirmation: "RESET" });
+        await market.receive({ type: "Reset", ...cause, confirmation: "RESET" });
       else return context.json({ error: "Choose a valid action, target and confirmation." }, 400);
       return context.json({ ok: true });
     });
@@ -270,7 +312,7 @@ export function createExchangeRuntime({
       if (!reset && Object.keys(body).some((key) => !keys.includes(key)))
         return context.json({ error: "Choose valid market settings." }, 400);
       try {
-        market.receive({
+        await market.receive({
           type: "Settings",
           settings: reset
             ? {
@@ -297,6 +339,8 @@ export function createExchangeRuntime({
         return context.json({ error: "Stop the current simulation before starting another." }, 409);
       try {
         simulator.start(body);
+        await market.settled();
+        await store.settled?.();
       } catch {
         return context.json(
           { error: "Use a valid scenario, seed, rate, chatter count and persona weights." },
@@ -332,6 +376,7 @@ export function createExchangeRuntime({
         simulator.inject({ type, chatter: 0, viewers: viewers as number });
       } else if (type === "follow") simulator.inject({ type, chatter: 0 });
       else simulator.inject({ type });
+      await market.settled();
       return context.json({ ok: true });
     });
     app.post("/api/emotes/refresh", (context) => {
@@ -365,16 +410,16 @@ export function createExchangeRuntime({
         typeof body.quiet !== "boolean"
       )
         return context.json({ error: "Choose a valid quiet-mode setting." }, 400);
-      settings.set("quietMode", body.quiet);
+      await settings.set("quietMode", body.quiet);
       chatOut.setQuiet(body.quiet);
       return context.json({ ok: true });
     });
-    app.post("/api/setup/check", (context) => {
+    app.post("/api/setup/check", async (context) => {
       const count = settings.get("connectionChecks");
       if (count >= Number.MAX_SAFE_INTEGER) {
         return context.json({ error: "Local connection check limit reached." }, 409);
       }
-      settings.set("connectionChecks", count + 1);
+      await settings.set("connectionChecks", count + 1);
       bus.publish(display(), [
         { id: `connection-check:${count + 1}`, at: now(), kind: "connection-check" },
       ]);
@@ -387,6 +432,7 @@ export function createExchangeRuntime({
       receiveEvent,
       tickMarket: market.tick,
       initialize: async () => {
+        await market.ready;
         await auth.initialize();
         eventsub.syncAuth();
         catalog.start();
@@ -403,8 +449,9 @@ export function createExchangeRuntime({
         helix.close();
         auth.close();
         bus.close();
+        overlayBus?.close();
         analyticsFeed.close();
-        store.close();
+        return store.close();
       },
     };
   } catch (error) {

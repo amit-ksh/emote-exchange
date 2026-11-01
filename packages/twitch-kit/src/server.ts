@@ -13,10 +13,13 @@ export interface StartHttpServerOptions {
   clientRoot: string;
   clientDist: string;
   development: boolean;
+  publicOrigin?: string;
 }
 
 export async function startHttpServer(options: StartHttpServerOptions) {
-  const { app, port, clientRoot, clientDist, development } = options;
+  const { app, port, clientRoot, clientDist, development, publicOrigin } = options;
+  if (publicOrigin && development)
+    throw new Error("Hosted mode requires a production client build.");
   if (!development) {
     try {
       await access(resolve(clientDist, "index.html"));
@@ -42,10 +45,17 @@ export async function startHttpServer(options: StartHttpServerOptions) {
     (request, response) => {
       const mutation = request.method !== "GET" && request.method !== "HEAD";
       if (
-        !isAllowedHost(request.headers.host, port) ||
+        !(
+          isAllowedHost(request.headers.host, port, publicOrigin) ||
+          (publicOrigin &&
+            request.url === "/healthz" &&
+            (request.method === "GET" || request.method === "HEAD") &&
+            isAllowedHost(request.headers.host, port))
+        ) ||
         request.method === "OPTIONS" ||
         (mutation &&
-          (!isAllowedOrigin(request.headers.origin, port) || request.headers["x-cta"] !== "1")) ||
+          (!isAllowedOrigin(request.headers.origin, port, publicOrigin) ||
+            request.headers["x-cta"] !== "1")) ||
         (request.headers.upgrade &&
           (!development || !isAllowedOrigin(request.headers.origin, port)))
       ) {
@@ -99,7 +109,7 @@ export async function startHttpServer(options: StartHttpServerOptions) {
   try {
     await new Promise<void>((resolveListening, reject) => {
       server.once("error", reject);
-      server.listen(port, "127.0.0.1", () => {
+      server.listen(port, publicOrigin ? "0.0.0.0" : "127.0.0.1", () => {
         server.off("error", reject);
         resolveListening();
       });

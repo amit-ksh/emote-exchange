@@ -150,7 +150,7 @@ pnpm build
 pnpm smoke
 ```
 
-The suite currently contains **171 tests**, including nine deployment-readiness checks alongside deterministic price fixtures, exact settlement, auth/protocol failures, guarded routes, greetings/Grants, analytics and a 40-minute virtual Soak. The Soak makes the full run take several minutes on some machines. Production smoke uses temporary data and checks actual process restart, SSE, demo behavior and preserved Portfolios.
+The suite currently contains **184 tests**, including ten deployment-readiness checks alongside deterministic price fixtures, exact settlement, auth/protocol failures, hosted authorization, Turso durability, guarded routes, greetings/Grants, analytics and a 40-minute virtual Soak. The Soak makes the full run take several minutes on some machines. Production smoke uses temporary data and checks actual process restart, SSE, demo behavior and preserved Portfolios. For Render configuration and its separate live acceptance gates, see [Render deployment](../../docs/render-deployment.md).
 
 ## Troubleshooting
 

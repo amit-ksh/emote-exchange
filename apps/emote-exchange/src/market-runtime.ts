@@ -51,8 +51,22 @@ export function createMarketRuntime(options: Options) {
     reset: false,
     grants: [],
   };
-  repo.commit(state, [recovery]);
-  function receive(input: MarketInput) {
+  const ready = Promise.resolve(repo.commit(state, [recovery]));
+  let tail = ready;
+  let pending = 0;
+  function receive(input: MarketInput): void | Promise<void> {
+    if (!options.store.asyncWrites) return apply(input);
+    if (pending >= 2000) return Promise.reject(new Error("Market input queue is full."));
+    pending++;
+    const task = tail
+      .then(() => apply(input))
+      .finally(() => {
+        pending--;
+      });
+    tail = task.catch(() => {});
+    return task;
+  }
+  function apply(input: MarketInput): void | Promise<void> {
     if (closed || status !== "ready")
       throw new Error("Market is unavailable. Restart after resolving storage.");
     const now = options.now();
@@ -108,21 +122,29 @@ export function createMarketRuntime(options: Options) {
           .sort((a, b) => a.closedAt - b.closedAt)
           .slice(-5);
     }
-    try {
-      repo.commit(next.state, next.effects);
-    } catch {
+    const storageFailure = () => {
       status = "storage-error";
       options.publish([]);
       throw new Error("Market storage failed. No event effects were delivered.");
+    };
+    const deliver = () => {
+      if (closed) return;
+      state = { ...next.state, catalog: state.catalog };
+      analytics = nextAnalytics;
+      recent = nextRecent;
+      const moments = next.effects.flatMap((effect) =>
+        effect.type === "broadcast" ? effect.moments : [],
+      );
+      options.publish(moments);
+      for (const say of says) options.say(say);
+    };
+    try {
+      const committed = repo.commit(next.state, next.effects);
+      if (committed instanceof Promise) return committed.then(deliver, storageFailure);
+    } catch {
+      return storageFailure();
     }
-    state = next.state;
-    analytics = nextAnalytics;
-    recent = nextRecent;
-    const moments = next.effects.flatMap((effect) =>
-      effect.type === "broadcast" ? effect.moments : [],
-    );
-    options.publish(moments);
-    for (const say of says) options.say(say);
+    deliver();
   }
   const timer =
     options.autoTick === false
@@ -130,7 +152,8 @@ export function createMarketRuntime(options: Options) {
       : setInterval(() => {
           if (!closed && status === "ready") {
             try {
-              receive({ type: "Tick" });
+              const result = receive({ type: "Tick" });
+              if (result instanceof Promise) void result.catch(() => {});
             } catch {
               /* Status is public; failed writes never deliver effects. */
             }
@@ -138,6 +161,8 @@ export function createMarketRuntime(options: Options) {
         }, 1000);
   timer?.unref();
   return {
+    ready,
+    settled: () => tail,
     receive,
     tick: () => receive({ type: "Tick" }),
     display: () => marketProjection(state, status),

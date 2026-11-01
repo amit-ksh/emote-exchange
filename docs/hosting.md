@@ -1,5 +1,7 @@
 # Hosting Emote Exchange
 
+**Update:** the owner selected the whole app on Render and Turso for persistence on the free instance. Hosted owner access and acknowledged Turso transactions are implemented. Follow [the current Render instructions](render-deployment.md) and [ADR 0010](adr/0010-single-streamer-render-hosting.md). The investigation below records the earlier local-only/Vercel deployment and is historical.
+
 Checked November 2, 2026. The shipped app is a **local, single-process streamer application**. It is not currently a hosted multi-user service.
 
 ## Observed Vercel deployment

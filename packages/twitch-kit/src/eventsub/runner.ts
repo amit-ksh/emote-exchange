@@ -243,7 +243,7 @@ export function createEventSub(options: RunnerOptions) {
       if (subscription.status === "authorization_revoked") {
         stop();
         broadcasterId = undefined;
-        options.auth.invalidate("broadcaster");
+        void Promise.resolve(options.auth.invalidate("broadcaster")).catch(() => {});
       }
     } else {
       if (!broadcasterId) return;

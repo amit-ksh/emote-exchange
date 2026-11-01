@@ -200,7 +200,7 @@ export function createEmoteCatalog(options: Options) {
         JSON.stringify({ scope: source.storageScope, at, count: entries.length }),
       ],
     });
-    options.store.writeBatch(writes);
+    return options.store.writeBatch(writes);
   }
   async function fetchSource(source: Source) {
     const controller = new AbortController();
@@ -251,7 +251,13 @@ export function createEmoteCatalog(options: Options) {
       )
         return;
       const at = now();
-      persist(source, entries, at);
+      await persist(source, entries, at);
+      if (
+        closed ||
+        controller.signal.aborted ||
+        sources.get(key(source.provider, source.scope)) !== source
+      )
+        return;
       source.entries = entries;
       source.count = entries.length;
       source.updatedAt = at;
@@ -358,12 +364,14 @@ export function createEmoteCatalog(options: Options) {
       if (identity === broadcaster) return;
       broadcaster = identity;
       if (identity)
-        options.store.writeBatch([
-          {
-            sql: "DELETE FROM emote_cache WHERE scope LIKE 'channel:%' AND scope != ?",
-            params: [`channel:${identity}`],
-          },
-        ]);
+        void Promise.resolve(
+          options.store.writeBatch([
+            {
+              sql: "DELETE FROM emote_cache WHERE scope LIKE 'channel:%' AND scope != ?",
+              params: [`channel:${identity}`],
+            },
+          ]),
+        ).catch(() => {});
       for (const provider of providers)
         for (const scope of ["channel", "global"] as const) {
           if (scope === "global" && provider !== "twitch") continue;

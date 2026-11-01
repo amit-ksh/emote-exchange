@@ -184,3 +184,28 @@ test("CLI help succeeds and unknown flags fail with usage before any requests", 
   assert.ok(invalid.stdout.includes("usage:"));
   assert.equal(invalid.stderr, "");
 });
+
+test("owner-protected hosted routes verify public OBS delivery without claiming private Twitch status", async () => {
+  const base = responses();
+  const report = await inspectDeployment(origin, async (url, options) => {
+    const parsed = new URL(url);
+    if (["/api/snapshot", "/events"].includes(parsed.pathname)) {
+      if (parsed.searchParams.get("client") !== "overlay")
+        return Response.json({ error: "Sign in" }, { status: 401 });
+      if (parsed.pathname === "/api/snapshot")
+        return Response.json({
+          v: 1,
+          seq: 0,
+          app: "Emote Exchange",
+          simulatorRunning: false,
+          market: { listings: [], traders: [] },
+          moments: [],
+        });
+    }
+    return base(url, options);
+  });
+  assert.equal(report.routesReady, true);
+  assert.equal(report.dashboardProtected, true);
+  assert.equal(report.twitchReady, false);
+  assert.match(renderReport(report), /owner sign-in/i);
+});

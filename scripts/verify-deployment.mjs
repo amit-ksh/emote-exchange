@@ -2,7 +2,7 @@ import { homedir } from "node:os";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-const defaultOrigin = "https://emote-exchange.vercel.app";
+const defaultOrigin = "https://emote-exchange.onrender.com";
 const routes = [
   "/",
   "/healthz",
@@ -119,12 +119,76 @@ export async function inspectDeployment(input, request = fetch) {
       }
     }),
   );
+  const dashboardProtected = ["/api/snapshot", "/events?client=dashboard"].every(
+    (route) => checks.find((check) => check.route === route)?.status === 401,
+  );
+  if (dashboardProtected) {
+    const publicChecks = await Promise.all(
+      ["/api/snapshot?client=overlay", "/events?client=overlay"].map(async (route) => {
+        let response;
+        try {
+          response = await request(`${origin}${route}`, {
+            redirect: "manual",
+            signal: AbortSignal.timeout(8000),
+            headers: {
+              Accept: route.startsWith("/events") ? "text/event-stream" : "application/json",
+            },
+          });
+          const type = response.headers.get("content-type") ?? "";
+          let ok =
+            response.status === 200 &&
+            type.includes(route.startsWith("/events") ? "text/event-stream" : "application/json");
+          if (ok && route.startsWith("/api/")) {
+            const data = await response.json();
+            ok =
+              data?.v === 1 &&
+              Number.isSafeInteger(data.seq) &&
+              data.app === "Emote Exchange" &&
+              typeof data.simulatorRunning === "boolean" &&
+              Array.isArray(data.moments) &&
+              Array.isArray(data.market?.listings) &&
+              Array.isArray(data.market?.traders) &&
+              Object.keys(data).every((key) =>
+                ["v", "seq", "app", "simulatorRunning", "market", "moments"].includes(key),
+              );
+          }
+          return {
+            route,
+            status: response.status,
+            ok,
+            detail: ok
+              ? "Public OBS projection verified; owner sign-in required for private status"
+              : "Expected public OBS projection",
+          };
+        } catch {
+          return {
+            route,
+            status: response?.status ?? 0,
+            ok: false,
+            detail: "Public OBS check failed",
+          };
+        } finally {
+          if (response?.body && !response.bodyUsed) await response.body.cancel().catch(() => {});
+        }
+      }),
+    );
+    if (publicChecks.every((check) => check.ok))
+      for (const check of checks)
+        if (
+          check.status === 401 &&
+          ["/api/snapshot", "/events?client=dashboard"].includes(check.route)
+        ) {
+          check.ok = true;
+          check.detail = "Owner sign-in required (expected protection)";
+        }
+    checks.push(...publicChecks);
+  }
   const routesReady = checks.every((check) => check.ok);
   const twitchReady =
     routesReady &&
     snapshot?.auth?.broadcaster?.connected === true &&
     snapshot?.eventsub?.status === "connected";
-  return { origin, checks, routesReady, twitchReady };
+  return { origin, checks, routesReady, twitchReady, dashboardProtected };
 }
 
 export function renderReport(report) {
@@ -132,6 +196,7 @@ export function renderReport(report) {
     `origin: ${JSON.stringify(report.origin)}`,
     `routesReady: ${report.routesReady}`,
     `twitchReady: ${report.twitchReady}`,
+    `dashboardProtected: ${report.dashboardProtected ?? false}`,
     `checks[${report.checks.length}]{route,status,result,detail}:`,
     ...report.checks.map(
       (c) =>

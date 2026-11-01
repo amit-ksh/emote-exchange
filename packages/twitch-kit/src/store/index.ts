@@ -18,9 +18,18 @@ export interface Migration {
   sql: string;
 }
 
+export interface Store {
+  readonly asyncWrites?: boolean;
+  close(): void | Promise<void>;
+  read<T>(sql: string, params?: readonly SQLInputValue[]): T[];
+  writeBatch(writes: readonly StoreWrite[]): void | Promise<void>;
+  settings<T extends Record<string, unknown>>(defaults: T): Settings<T>;
+  settled?(): Promise<void>;
+}
+
 export interface Settings<T extends Record<string, unknown>> {
   get<K extends keyof T>(key: K): T[K];
-  set<K extends keyof T>(key: K, value: T[K]): void;
+  set<K extends keyof T>(key: K, value: T[K]): void | Promise<void>;
 }
 
 function assertJson(value: unknown, ancestors = new Set<object>()): void {
@@ -74,7 +83,7 @@ function matchesDefault(value: unknown, baseline: unknown): boolean {
   return typeof value === typeof baseline;
 }
 
-const platformSchema = `
+export const platformSchema = `
   CREATE TABLE tokens (
     role TEXT PRIMARY KEY CHECK (role IN ('broadcaster', 'bot')),
     user_id TEXT NOT NULL,
@@ -134,7 +143,7 @@ export function openStore({ filename, migrations = [] }: OpenStoreOptions) {
     database.close();
     throw error;
   }
-  return {
+  const store: Store = {
     close() {
       database.close();
     },
@@ -152,39 +161,46 @@ export function openStore({ filename, migrations = [] }: OpenStoreOptions) {
       }
     },
     settings<T extends Record<string, unknown>>(defaults: T): Settings<T> {
-      assertJson(defaults);
-      const baseline = JSON.parse(JSON.stringify(defaults)) as T;
-      const checkedKey = (key: keyof T): string => {
-        if (typeof key !== "string" || !Object.hasOwn(baseline, key))
-          throw new Error("Unknown setting.");
-        return key;
-      };
-      return {
-        get<K extends keyof T>(key: K): T[K] {
-          const row = database.prepare("SELECT value FROM kv WHERE key = ?").get(checkedKey(key));
-          const value: unknown = JSON.parse(
-            row ? String(row.value) : JSON.stringify(baseline[key]),
-          );
-          assertJson(value);
-          if (!matchesDefault(value, baseline[key]))
-            throw new TypeError("Stored setting does not match its default type.");
-          return value as T[K];
+      return storeSettings(store, defaults);
+    },
+  };
+  return store;
+}
+
+export function storeSettings<T extends Record<string, unknown>>(
+  store: Store,
+  defaults: T,
+): Settings<T> {
+  assertJson(defaults);
+  const baseline = JSON.parse(JSON.stringify(defaults)) as T;
+  const checkedKey = (key: keyof T): string => {
+    if (typeof key !== "string" || !Object.hasOwn(baseline, key))
+      throw new Error("Unknown setting.");
+    return key;
+  };
+  return {
+    get<K extends keyof T>(key: K): T[K] {
+      const row = store.read<{ value: string }>("SELECT value FROM kv WHERE key = ?", [
+        checkedKey(key),
+      ])[0];
+      const value: unknown = JSON.parse(row ? String(row.value) : JSON.stringify(baseline[key]));
+      assertJson(value);
+      if (!matchesDefault(value, baseline[key]))
+        throw new TypeError("Stored setting does not match its default type.");
+      return value as T[K];
+    },
+    set<K extends keyof T>(key: K, value: T[K]) {
+      const settingKey = checkedKey(key);
+      assertJson(value);
+      if (!matchesDefault(value, baseline[key]))
+        throw new TypeError("Setting does not match its default type.");
+      const json = JSON.stringify(value);
+      return store.writeBatch([
+        {
+          sql: "INSERT INTO kv(key,value) VALUES (?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value",
+          params: [settingKey, json],
         },
-        set<K extends keyof T>(key: K, value: T[K]) {
-          const settingKey = checkedKey(key);
-          assertJson(value);
-          if (!matchesDefault(value, baseline[key]))
-            throw new TypeError("Setting does not match its default type.");
-          const json = JSON.stringify(value);
-          database
-            .prepare(
-              "INSERT INTO kv(key,value) VALUES (?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value",
-            )
-            .run(settingKey, json);
-        },
-      };
+      ]);
     },
   };
 }
-
-export type Store = ReturnType<typeof openStore>;

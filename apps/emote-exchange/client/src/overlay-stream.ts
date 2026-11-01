@@ -69,7 +69,7 @@ export function useOverlayStream() {
     events.addEventListener("snapshot", receive);
     events.addEventListener("delta", receive);
     events.onerror = () => setStatus("reconnecting");
-    void fetch("/api/snapshot", { signal: abort.signal })
+    void fetch("/api/snapshot?client=overlay", { signal: abort.signal })
       .then(async (response) => {
         if (!response.ok) throw new Error();
         accept(await response.json(), "fetch");

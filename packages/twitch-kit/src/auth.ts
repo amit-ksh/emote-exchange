@@ -20,6 +20,7 @@ interface AuthOptions {
   clientId: string;
   clientSecret: string;
   publicOrigin: string;
+  ownerLogin?: string;
   fetcher?: typeof fetch;
   now?: () => number;
   onChange?: () => void;
@@ -53,6 +54,32 @@ export function createTwitchAuth(options: AuthOptions) {
   const now = options.now ?? Date.now;
   const configured = Boolean(options.clientId && options.clientSecret);
   const pending = new Map<string, { nonceHash: string; role: AuthRole; expires: number }>();
+  const sessions = new Map<
+    string,
+    { expires: number; controller: AbortController; timer: ReturnType<typeof setTimeout> }
+  >();
+  function removeSession(key: string) {
+    const session = sessions.get(key);
+    if (!session) return;
+    sessions.delete(key);
+    clearTimeout(session.timer);
+    session.controller.abort();
+  }
+  function sessionFor(cookie: string | undefined) {
+    const value = cookie
+      ?.split(";")
+      .map((part) => part.trim())
+      .find((part) => part.startsWith("exchange_dashboard="))
+      ?.slice("exchange_dashboard=".length);
+    if (!value || !/^[a-f0-9]{64}$/.test(value)) return undefined;
+    const key = hash(value);
+    const session = sessions.get(key);
+    if (session && session.expires <= now()) {
+      removeSession(key);
+      return undefined;
+    }
+    return session;
+  }
   const accounts = { broadcaster: empty(), bot: empty() };
   let closed = false;
   const fetcher = options.fetcher ?? fetch;
@@ -82,6 +109,9 @@ export function createTwitchAuth(options: AuthOptions) {
       !data.user_id ||
       typeof data.login !== "string" ||
       !data.login ||
+      (role === "broadcaster" &&
+        options.ownerLogin !== undefined &&
+        data.login.toLowerCase() !== options.ownerLogin) ||
       !Array.isArray(data.scopes) ||
       !scopes[role].every((scope) => (data.scopes as unknown[]).includes(scope)) ||
       !data.scopes.every((scope) => typeof scope === "string") ||
@@ -96,13 +126,14 @@ export function createTwitchAuth(options: AuthOptions) {
       expiresAt: now() + (data.expires_in as number) * 1000,
     };
   }
-  function save(
+  async function save(
     role: AuthRole,
     access: string,
     refresh: string,
     identity: Awaited<ReturnType<typeof validate>>,
+    revision = revisions[role],
   ) {
-    options.store.writeBatch([
+    await options.store.writeBatch([
       {
         sql: "INSERT INTO tokens(role,user_id,login,display_name,access_token,refresh_token,scopes,expires_at) VALUES(?,?,?,?,?,?,?,?) ON CONFLICT(role) DO UPDATE SET user_id=excluded.user_id,login=excluded.login,display_name=excluded.display_name,access_token=excluded.access_token,refresh_token=excluded.refresh_token,scopes=excluded.scopes,expires_at=excluded.expires_at",
         params: [
@@ -117,6 +148,7 @@ export function createTwitchAuth(options: AuthOptions) {
         ],
       },
     ]);
+    if (closed || revisions[role] !== revision) throw new Error("Authorization attempt ended.");
     lastValidated.set(role, now());
     accounts[role] = {
       connected: true,
@@ -137,16 +169,19 @@ export function createTwitchAuth(options: AuthOptions) {
       throw new Error("Invalid token response");
     const identity = await validate(role, tokens.access_token);
     if (closed || revisions[role] !== revision) throw new Error("Authorization attempt ended.");
-    save(role, tokens.access_token, tokens.refresh_token, identity);
+    await save(role, tokens.access_token, tokens.refresh_token, identity);
   }
   function invalidate(role: AuthRole, reconnect = true) {
     if (closed) return;
     revisions[role]++;
     for (const [id, attempt] of pending) if (attempt.role === role) pending.delete(id);
-    options.store.writeBatch([{ sql: "DELETE FROM tokens WHERE role = ?", params: [role] }]);
+    const deletion = options.store.writeBatch([
+      { sql: "DELETE FROM tokens WHERE role = ?", params: [role] },
+    ]);
     accounts[role] = { ...empty(), reconnect };
     lastValidated.delete(role);
     changed();
+    return deletion;
   }
   function refresh(role: AuthRole): Promise<void> {
     const existing = refreshes.get(role);
@@ -164,14 +199,14 @@ export function createTwitchAuth(options: AuthOptions) {
       }),
       revision,
     )
-      .catch((error) => {
+      .catch(async (error) => {
         if (
           !closed &&
           revisions[role] === revision &&
           error instanceof AuthFailure &&
           (error.status === 400 || error.status === 401)
         )
-          invalidate(role);
+          await invalidate(role);
         throw new Error("Reconnect Twitch to continue.");
       })
       .finally(() => {
@@ -198,7 +233,7 @@ export function createTwitchAuth(options: AuthOptions) {
           if (!force && now() - (lastValidated.get(role) ?? 0) < 3_600_000) continue;
           const identity = await validate(role, stored.access_token);
           if (identity.userId !== stored.user_id) {
-            invalidate(role);
+            await invalidate(role);
             continue;
           }
           if (
@@ -207,7 +242,7 @@ export function createTwitchAuth(options: AuthOptions) {
             row(role)?.access_token === stored.access_token &&
             row(role)?.refresh_token === stored.refresh_token
           )
-            save(role, stored.access_token, stored.refresh_token, identity);
+            await save(role, stored.access_token, stored.refresh_token, identity);
         } catch (error) {
           if (closed || revisions[role] !== revision) continue;
           if (error instanceof AuthFailure && error.status === 401) {
@@ -230,7 +265,8 @@ export function createTwitchAuth(options: AuthOptions) {
   async function disconnect(role: AuthRole) {
     if (closed) return;
     const stored = row(role);
-    invalidate(role, false);
+    await invalidate(role, false);
+    if (role === "broadcaster") for (const key of sessions.keys()) removeSession(key);
     if (stored) {
       try {
         await fetcher("https://id.twitch.tv/oauth2/revoke", {
@@ -249,6 +285,12 @@ export function createTwitchAuth(options: AuthOptions) {
     refresh,
     disconnect,
     invalidate,
+    authorizeDashboard(cookie: string | undefined) {
+      return !closed && (!options.ownerLogin || Boolean(sessionFor(cookie)));
+    },
+    dashboardSignal(cookie: string | undefined) {
+      return sessionFor(cookie)?.controller.signal;
+    },
     accessToken(role: AuthRole) {
       return accounts[role].connected ? row(role)?.access_token : undefined;
     },
@@ -267,7 +309,13 @@ export function createTwitchAuth(options: AuthOptions) {
       app.get("/auth/login", (c) => {
         const role = c.req.query("role") ?? "broadcaster";
         if (!configured || closed || !isRole(role)) return c.redirect("/?auth=failed");
-        if (new URL(c.req.url).origin !== options.publicOrigin)
+        if (options.ownerLogin && role === "bot" && !sessionFor(c.req.header("Cookie")))
+          return c.json({ error: "Sign in as the streamer first." }, 403);
+        if (
+          options.ownerLogin
+            ? new URL(c.req.url).host !== new URL(options.publicOrigin).host
+            : new URL(c.req.url).origin !== options.publicOrigin
+        )
           return c.redirect(`${options.publicOrigin}/auth/login?role=${role}`);
         const previous = getCookie(c, "exchange_oauth");
         for (const [id, attempt] of pending) {
@@ -283,6 +331,7 @@ export function createTwitchAuth(options: AuthOptions) {
           sameSite: "Lax",
           path: "/auth",
           maxAge: 600,
+          secure: Boolean(options.ownerLogin),
         });
         const url = new URL("https://id.twitch.tv/oauth2/authorize");
         url.search = new URLSearchParams({
@@ -301,7 +350,7 @@ export function createTwitchAuth(options: AuthOptions) {
         const attempt = pending.get(state);
         pending.delete(state);
         const cookie = getCookie(c, "exchange_oauth");
-        deleteCookie(c, "exchange_oauth", { path: "/auth" });
+        deleteCookie(c, "exchange_oauth", { path: "/auth", secure: Boolean(options.ownerLogin) });
         if (
           closed ||
           !attempt ||
@@ -309,7 +358,8 @@ export function createTwitchAuth(options: AuthOptions) {
           !cookie ||
           hash(cookie) !== attempt.nonceHash ||
           c.req.query("error") ||
-          !code
+          !code ||
+          (options.ownerLogin && attempt.role === "bot" && !sessionFor(c.req.header("Cookie")))
         )
           return c.redirect("/?auth=failed");
         try {
@@ -325,6 +375,30 @@ export function createTwitchAuth(options: AuthOptions) {
             }),
             revision,
           );
+          if (options.ownerLogin && attempt.role === "broadcaster") {
+            for (const [key, session] of sessions) if (session.expires <= now()) removeSession(key);
+            while (sessions.size >= 20) {
+              const key = sessions.keys().next().value;
+              if (key) removeSession(key);
+            }
+            const value = randomBytes(32).toString("hex");
+            const key = hash(value);
+            const maxAge = 12 * 60 * 60;
+            const timer = setTimeout(() => removeSession(key), maxAge * 1000);
+            timer.unref();
+            sessions.set(key, {
+              expires: now() + maxAge * 1000,
+              controller: new AbortController(),
+              timer,
+            });
+            setCookie(c, "exchange_dashboard", value, {
+              path: "/",
+              httpOnly: true,
+              secure: true,
+              sameSite: "Lax",
+              maxAge,
+            });
+          }
           return c.redirect("/?auth=connected");
         } catch {
           return c.redirect("/?auth=failed");
@@ -341,6 +415,7 @@ export function createTwitchAuth(options: AuthOptions) {
     close() {
       closed = true;
       pending.clear();
+      for (const key of sessions.keys()) removeSession(key);
     },
   };
 }

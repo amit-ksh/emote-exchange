@@ -8,6 +8,7 @@ import { LivePage } from "./live.tsx";
 import { MarketPanel, MarketSettingsPanel, TradersPanel } from "./market.tsx";
 import { ExchangeOverlay } from "./overlay.tsx";
 import { readOverlayMarket } from "./overlay-model.ts";
+import { defaultOverlayUrl, isOverlayUrl } from "./overlay-url.ts";
 import { OverlayUrlPanel, SetupChecklist } from "./setup.tsx";
 import { readSimulator, SimulatorPanel } from "./simulator.tsx";
 import "./styles.css";
@@ -71,23 +72,7 @@ function readSnapshot(value: unknown): FoundationSnapshot | null {
   ) {
     return null;
   }
-  try {
-    const url = new URL(candidate.overlayUrl);
-    if (
-      url.protocol !== "http:" ||
-      !["localhost", "127.0.0.1"].includes(url.hostname) ||
-      url.port !== window.location.port ||
-      url.pathname !== "/overlay" ||
-      url.username ||
-      url.password ||
-      url.search ||
-      url.hash
-    ) {
-      return null;
-    }
-  } catch {
-    return null;
-  }
+  if (!isOverlayUrl(candidate.overlayUrl, window.location.origin)) return null;
   return {
     v: 1,
     seq: candidate.seq as number,
@@ -143,10 +128,19 @@ function useFoundation(client: "dashboard" | "overlay") {
 
     events.addEventListener("snapshot", receiveSnapshot);
     events.addEventListener("delta", receiveSnapshot);
-    events.onerror = () => setStatus("reconnecting");
+    events.onerror = () => {
+      setStatus("reconnecting");
+      // A revoked or expired hosted session returns to the server's sign-in screen.
+      void fetch("/api/snapshot", { signal: controller.signal })
+        .then((response) => {
+          if (response.status === 401) window.location.reload();
+        })
+        .catch(() => {});
+    };
 
     void fetch("/api/snapshot", { signal: controller.signal })
       .then(async (response) => {
+        if (response.status === 401) window.location.reload();
         if (!response.ok) throw new Error("Snapshot unavailable");
         const next = readSnapshot(await response.json());
         if (!next) throw new Error("Snapshot unavailable");
@@ -313,8 +307,7 @@ function Dashboard() {
     snapshot?.eventsub.status === "connected" &&
     snapshot.eventsub.streamStatus === "online";
   const complete = Number(connected) + Number(overlay) + Number(online);
-  const url = new URL("/overlay", window.location.origin);
-  url.hostname = "127.0.0.1";
+  const url = new URL(defaultOverlayUrl(window.location.origin));
   const subtitles: Record<View, string> = {
     Overview: "Your channel, ready for the Exchange.",
     Live: "Watch engagement become a market.",

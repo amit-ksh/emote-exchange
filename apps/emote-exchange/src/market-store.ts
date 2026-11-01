@@ -246,7 +246,7 @@ export function createMarketRepository(store: Store) {
         sql: "INSERT INTO engine_state VALUES (1,1,?,?,?) ON CONFLICT(singleton) DO UPDATE SET version=excluded.version,saved_at=excluded.saved_at,last_tick_at=excluded.last_tick_at,data=excluded.data",
         params: [state.at, state.lastTickAt, checkpointMarket(state)],
       });
-      store.writeBatch(writes);
+      return store.writeBatch(writes);
     },
   };
 }
