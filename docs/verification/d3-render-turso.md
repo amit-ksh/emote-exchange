@@ -34,3 +34,7 @@ A read-only Twitch authorization request with the existing public client ID and 
 Before pushing this task, the public Render routes timed out; the previous server was not verified running. Post-push deployment, private owner authorization, a real hosted chat command/reply and hosted OBS behavior must be checked separately. The existing local recordings remain valid footage of earlier actual Twitch interactions. Do not claim they prove a new cloud login.
 
 The one-time thread follow-up was updated to 5:05 AM IST. Video and submission artifacts remain local and git-ignored.
+
+## Clean-checkout CI correction
+
+The first pushed CI run, 41346484189, failed before the app tests: the new hosted HTTP test required an existing `dist/client/index.html`, while CI correctly runs tests before the client build. The test now creates its own temporary production HTML fixture and checks that the authenticated response contains it. This removes the hidden build-order dependency without changing the application. The original failure is retained in ignored `artifacts/render/ci-failed.log`.

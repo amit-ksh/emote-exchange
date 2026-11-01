@@ -214,7 +214,7 @@ function ConnectionPanel({ auth }: { auth: FoundationSnapshot["auth"] | undefine
       </p>
       {!auth?.configured ? (
         <p className="copy-feedback">
-          Add your Twitch app credentials to the local .env file, then restart the app.
+          Add your Twitch app credentials to the server environment, then restart the app.
         </p>
       ) : (
         (["broadcaster", "bot"] as const).map((role) => (
@@ -328,7 +328,7 @@ function Dashboard() {
         headers: { "X-CTA": "1" },
       });
       if (!response.ok) throw new Error();
-      setCheckStatus("Local connection checked.");
+      setCheckStatus("Dashboard connection checked.");
     } catch {
       setCheckStatus("Could not complete the check. Try again.");
     }
@@ -368,12 +368,12 @@ function Dashboard() {
             <span className="tag">{snapshot?.mode === "live" ? "Live" : "Demo"}</span>
             <p>
               {snapshot?.mode === "live"
-                ? "Connected to your Twitch channel. Your Exchange stays on this machine."
+                ? "Connected to your Twitch channel. Chat attention drives the Exchange."
                 : "Simulated chat only. Your Twitch stream is not affected."}
             </p>
             <span className="connection-note" role="status">
               {status === "connected"
-                ? "● Local connection ready"
+                ? "● Dashboard connected"
                 : status === "connecting"
                   ? "Connecting…"
                   : "Reconnecting…"}
@@ -422,7 +422,7 @@ function Dashboard() {
           <>
             <div className="overview-stats">
               {[
-                ["Mode", snapshot?.mode === "live" ? "Live" : "Demo", "Local workspace"],
+                ["Mode", snapshot?.mode === "live" ? "Live" : "Demo", "Your Exchange"],
                 [
                   "Twitch",
                   connected ? "Connected" : "Not connected",
@@ -496,7 +496,7 @@ function Dashboard() {
           <>
             <EventSubPanel connection={snapshot?.eventsub} />
             <details className="diagnostic-check">
-              <summary>Local connection</summary>
+              <summary>Dashboard connection</summary>
               <button
                 className="button button-secondary"
                 type="button"

@@ -1,8 +1,9 @@
 import assert from "node:assert/strict";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { request as httpRequest } from "node:http";
-import { resolve } from "node:path";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import test from "node:test";
-import { fileURLToPath } from "node:url";
 import {
   createHttpApp,
   createOverlayBus,
@@ -54,20 +55,25 @@ test("production listener serves a hosted owner, guards Origin and Host and clos
     writes++;
     return c.json({ ok: true });
   });
-  const root = fileURLToPath(new URL("../../../apps/emote-exchange/", import.meta.url));
+  const clientDist = mkdtempSync(join(tmpdir(), "exchange-hosted-http-"));
+  writeFileSync(
+    join(clientDist, "index.html"),
+    "<!doctype html><title>Hosted HTTP fixture</title><main>Private dashboard fixture</main>",
+  );
   const running = await startHttpServer({
     app,
     port: 0,
     publicOrigin: origin,
     development: false,
-    clientRoot: resolve(root, "client"),
-    clientDist: resolve(root, "dist/client"),
+    clientRoot: clientDist,
+    clientDist,
   });
   t.after(async () => {
     auth.close();
     bus.close();
     store.close();
     await running.close();
+    rmSync(clientDist, { recursive: true, force: true });
   });
   const address = running.server.address();
   assert.ok(address && typeof address !== "string");
@@ -124,7 +130,9 @@ test("production listener serves a hosted owner, guards Origin and Host and clos
     ?.find((cookie) => cookie.startsWith("exchange_dashboard="))
     ?.split(";")[0];
   assert.ok(session);
-  assert.equal((await request("/", { Cookie: session })).status, 200);
+  const dashboard = await request("/", { Cookie: session });
+  assert.equal(dashboard.status, 200);
+  assert.match(dashboard.body, /Private dashboard fixture/);
   const snapshot = await request("/api/snapshot", { Cookie: session });
   assert.equal(snapshot.status, 200);
   assert.equal(JSON.parse(snapshot.body).label, "private dashboard");
