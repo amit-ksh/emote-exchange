@@ -9,6 +9,7 @@ data/
 coverage/
 artifacts/
 references/
+/docs/submission/
 *.log
 .DS_Store
 Thumbs.db

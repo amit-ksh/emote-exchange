@@ -45,7 +45,7 @@ The explicit app folder already matches the product name. The workspace folder c
 | Reasons for technical choices | [Architecture decisions](docs/adr/) |
 | Accounts, assets and documentation links | [Resources](docs/resources.md) |
 | Organizer requirements to confirm | [Hackathon brief](docs/hackathon-brief.md) |
-| Video and submission draft | [Submission kit](docs/submission/emote-exchange.md) |
+| Video and submission draft | Kept locally in git-ignored `docs/submission/` |
 | Domain terminology | [Glossary map](GLOSSARY-MAP.md) |
 | Repository working instructions | [AGENTS.md](AGENTS.md) |
 
