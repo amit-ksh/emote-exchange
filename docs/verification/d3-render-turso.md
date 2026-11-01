@@ -25,7 +25,7 @@ The real database then passed: migration, a committed deployment-check key, a de
 
 A separate local production server on port 4112 used native SQLite demo data, no Twitch credentials and no cloud database. Start demo was clicked in the real dashboard. The actual overlay loaded the new `client=overlay` snapshot and SSE routes.
 
-Inspected at 1920×1080 and 960×540 over a white transparency matte: Price tape, chart, Top Traders, IPO/Raid banners and Feed render; the SIM label is visible; no status/account diagnostics appear. DOM geometry confirmed the half-scale canvas is 960×540 with transform scale(0.5). No Board layout change was needed. The fixed browser URL handling preserves public HTTPS rather than producing `https://127.0.0.1/overlay`. Local screenshots: ignored `artifacts/render/overlay-full.png` and `overlay-half.png`. This is browser evidence, not a new OBS check.
+Rechecked the actual browser viewport at 1920×1080 and 960×540: Price tape, chart, Top Traders, Halt banner and Feed render; the SIM label is visible; no status/account diagnostics appear. DOM geometry confirmed both viewport sizes, with transform scale(1) and scale(0.5), respectively. No Board layout change was needed. The fixed browser URL handling preserves public HTTPS rather than producing `https://127.0.0.1/overlay`. Correctly sized local screenshots are ignored `artifacts/render/overlay-1920.jpg` and `overlay-960.jpg`. The earlier `overlay-full.png` capture was actually 1280×720 and is superseded by this check. This is browser evidence, not a new OBS check.
 
 ## Deployment and account gates
 
@@ -33,8 +33,10 @@ A read-only Twitch authorization request with the existing public client ID and 
 
 Before pushing this task, the public Render routes timed out; the previous server was not verified running. Post-push deployment, private owner authorization, a real hosted chat command/reply and hosted OBS behavior must be checked separately. The existing local recordings remain valid footage of earlier actual Twitch interactions. Do not claim they prove a new cloud login.
 
-The one-time thread follow-up was updated to 5:05 AM IST. Video and submission artifacts remain local and git-ignored.
+At the 5:05 AM IST follow-up, public Render routes still timed out. Automatic approval review blocked Render's GitHub sign-in because it may grant repository access. Explicit permission to continue that sign-in is pending; it was not bypassed. Successful cloud deployment and hosted account checks remain unverified. Video and submission artifacts remain local and git-ignored.
 
 ## Clean-checkout CI correction
 
 The first pushed CI run, 41346484189, failed before the app tests: the new hosted HTTP test required an existing `dist/client/index.html`, while CI correctly runs tests before the client build. The test now creates its own temporary production HTML fixture and checks that the authenticated response contains it. This removes the hidden build-order dependency without changing the application. The original failure is retained in ignored `artifacts/render/ci-failed.log`.
+
+The replacement [CI run 41347760656](https://github.com/amit-ksh/emote-exchange/actions/runs/41347760656), for commit `04faa6a`, passed on both Ubuntu and Windows: type checking, lint, all 184 tests, production build and the production restart/SSE smoke check.
