@@ -1,5 +1,7 @@
 # Emote Exchange — submission copy
 
+For the current paste-ready entry and demo assets, use [Devpost submission](devpost-submission.md) and [demo-video package](demo-video.md). This file retains the longer build narrative and evidence index.
+
 Prepared October 29, 2026 from the shipped app. This file contains paste-ready description text and a factual evidence index. It is not a claim that a video or Devpost entry has been submitted.
 
 ## Entry fields
