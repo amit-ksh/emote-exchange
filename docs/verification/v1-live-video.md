@@ -33,4 +33,6 @@ Final [MP4](../submission/media/emote-exchange-devpost.mp4): **125 seconds, 3,75
 
 `pnpm check`, `pnpm lint`, `pnpm test` and `pnpm build` passed: **71 Kit + 91 app = 162 tests**, zero failures. Soak p95 2.725 ms and sampled peak heap 132.4 MiB. Application code was unchanged. The later report of three additional DemoBull messages is not used as evidence of a recorded attention/Price change; the verified command loop and labeled simulation supply those parts of the edit.
 
+The first remote run of the media commit caught a missing trailing newline in the newly copied edit JSON; the earlier local lint had run before that file was copied. Reproduced the formatter failure locally, formatted the metadata and reran lint successfully. No video, audio or application behavior changed in that correction.
+
 The supplied API account reported a **free plan**. The title, metadata, end card and [publishing package](../submission/video-publishing.md) include `elevenlabs.io`; a commercial audio license is not claimed. Confirm intended usage against ElevenLabs' policy before publication. Public YouTube upload and logged-out playback remain V2 checks under the [official rules](https://twitchcon-codex.devpost.com/rules), checked November 1. No video was uploaded or Devpost entry submitted here.
