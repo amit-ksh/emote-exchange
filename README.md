@@ -6,7 +6,7 @@ This repository focuses on one Codex x TwitchCon hackathon entry. The plan is to
 
 ## Status
 
-K1–K7 and E0–E9 are implemented: Twitch integration, persistent market/trading, the overlay and dashboard controls, greetings/Streaks, broadcaster Grants and Live analytics. The 162-test suite, types, lint, production build and clean-folder smoke checks pass. [H4 hardening](docs/verification/h4-hardening.md) verifies guards, recovery, privacy and simulated transport failures. Full recorded live walkthroughs and actual OBS checks remain submission gates. Start with the [judge-facing app README](apps/emote-exchange/README.md).
+K1–K7 and E0–E9 are implemented: Twitch integration, persistent market/trading, the overlay and dashboard controls, greetings/Streaks, broadcaster Grants and Live analytics. The 171-test suite, types, lint, production build and clean-folder smoke checks pass. [H4 hardening](docs/verification/h4-hardening.md) verifies guards, recovery, privacy and simulated transport failures. Full recorded live walkthroughs and actual OBS checks remain submission gates. Start with the [judge-facing app README](apps/emote-exchange/README.md).
 
 ## Quick start
 
@@ -22,6 +22,8 @@ pnpm dev:exchange
 Dashboard: [http://localhost:4100](http://localhost:4100). OBS browser source: [http://127.0.0.1:4100/overlay](http://127.0.0.1:4100/overlay), at 1920 × 1080. Demo mode starts without Twitch credentials. See the app README for the features available in the current milestone.
 
 To configure Twitch, copy `apps/emote-exchange/.env.example` to `.env`, register one Twitch application, and follow [the setup guide](docs/setup-guide.md).
+
+For a deployed frontend, run `pnpm verify:deployment https://emote-exchange.vercel.app` to check the backend routes, overlay URL and Twitch connection metadata. It exits nonzero when the deployment is not ready. See [hosting](docs/hosting.md); passing route checks still requires a manual viewer-command test.
 
 ## Structure
 

@@ -25,7 +25,8 @@
     "check": "pnpm -r check",
     "lint": "biome check .",
     "format": "biome check --write .",
-    "test": "pnpm -r --workspace-concurrency=1 test",
+    "test": "node --test scripts/verify-deployment.test.mjs && pnpm -r --workspace-concurrency=1 test",
+    "verify:deployment": "node scripts/verify-deployment.mjs",
     "smoke": "node scripts/smoke.mjs",
     "experiment:market": "node scripts/experiments/behavior-fixtures.mjs",
     "probe:market": "node scripts/experiments/market-engine-load.mjs"

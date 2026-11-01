@@ -78,6 +78,26 @@ These require a hosted-mode implementation first; they are not instructions to w
 
 For immediate use without this migration, start the existing local app, open `http://localhost:4100`, keep the local callback registered, and use the local overlay URL above.
 
+## Repeatable step-6 check
+
+```sh
+pnpm verify:deployment https://emote-exchange.vercel.app
+```
+
+The command checks HTML, health JSON, the app snapshot and overlay URL, SSE response headers, the Twitch authorization redirect/callback and connected broadcaster/EventSub metadata. It cancels streaming responses and does not print response bodies, tokens or OAuth state. It does not complete Twitch authorization, send chat or prove live Trades. Exit 0 means routes and connection metadata are ready; 1 means not ready; 2 means invalid arguments. Use `--help` for syntax. Running with no arguments checks the deployment above.
+
+The committed `vercel.json` adds an exact `/overlay` → `/index.html` frontend rewrite. It deliberately does not rewrite missing API or auth routes to HTML. This can fix the static overlay page's 404 after redeployment, but backend checks still require steps 1–3. [Latest verification](verification/d2-hosted-readiness.md).
+
+## Concrete plan for steps 1–3
+
+Steps 4–5 were reported complete by the owner. Keep the existing Twitch application and callback registration. If the credentials currently exist only in Vercel, the Node backend will also need those private server variables when it is created.
+
+1. **Hosted mode in code.** Agree and record a new hosting ADR before changing the current local-only contract. Add an explicit hosted mode while preserving the local default: exact public-origin/Host validation, secure cookies, owner-restricted streamer sessions, protected dashboard actions and a separate read-only overlay projection. Restrict broadcaster connection to the configured owner's Twitch identity. Update both server URL generation and the client snapshot reader, which currently rejects HTTPS overlay URLs. Preserve Origin + `X-CTA`; do not add wildcard CORS. Test local behavior and hosted authorization failures before deploying.
+2. **Always-running backend.** A paid Render Node web service with a persistent disk is one concrete option; a suitably managed VPS also works. Use one instance for SQLite. From the repository root, install the pinned pnpm version, run `pnpm install --frozen-lockfile` and `pnpm build`, then start with `pnpm start:exchange` after hosted binding support exists. Mount persistent storage and set an absolute `DATA_DIR` under that mount. Put the existing Twitch credentials and public origin in this service's private environment. Free Render web services sleep and do not provide persistent disks, so they do not match this runtime's needs. No service or paid resource has been created here.
+3. **Vercel proxy.** Once a real backend HTTPS URL exists, add explicit external rewrites for `/api/:path*`, `/events`, `/auth/:path*` and `/healthz`, preserving each path. Keep static assets on Vercel and the overlay rewrite above. Review forwarded headers and OAuth cookies against the backend's explicit public-origin rules; verify SSE delivery/reconnection through the proxy. Do not insert a guessed backend hostname or replace failures with a catch-all HTML response. Re-run step 6, then verify a viewer command, queued reply and OBS output.
+
+The Vercel rewrites are supported platform configuration; the missing backend URL, hosting resource and hosted-mode implementation are still prerequisites. The current task checks readiness and fixes static overlay routing, not the public authentication architecture.
+
 ## References
 
 - [Vite on Vercel](https://vercel.com/docs/frameworks/frontend/vite)
@@ -87,3 +107,7 @@ For immediate use without this migration, start the existing local app, open `ht
 - [Current local configuration](../apps/emote-exchange/.env.example)
 - [Local auth decision](adr/0004-auth-code-flow.md)
 - [Registering the Twitch redirect URL](https://dev.twitch.tv/docs/authentication/register-app/)
+- [External Vercel rewrites](https://vercel.com/docs/routing/rewrites)
+- [Render web services](https://render.com/docs/web-services)
+- [Render persistent disks](https://render.com/docs/disks)
+- [Render free-service limitations](https://render.com/docs/free)
