@@ -11,8 +11,9 @@ Updated November 1, 2026. This is a preparation record, not a submitted-entry co
 | OBS checks | [H3 actual OBS report](../verification/h3-obs.md): full/half, bright/dark, motion, empty/reconnect and numeric-boundary captures; source blending and layout fixes |
 | H1 / H5 live recordings | Real one-viewer buy/portfolio/sell recorded November 1; complete two-viewer IPO, real follow and restart/closing walkthroughs remain |
 | V1 / V2 project video | [2:05 narrated export](../verification/v1-live-video.md) complete with real Twitch footage and source/review records; [audio license and public YouTube playback](video-publishing.md) remain publishing gates |
+| App-only launch revision | [1:41 Sarah launch video](../verification/v1-launch-video.md), separate command/feature chapters and new striped-background Twitch capture; no build/test-results segment, as requested |
 | D1 entry text | [Prepared description](emote-exchange.md) and [actual main session](codex-sessions.md); final video URL and screenshot selection remain |
 | D2 judge access | Private repository; organizer access has not been verified |
 | D3 / D4 submission | Not submitted; entrant review, final confirmation and revision/tag remain |
 
-The supplied Ion launch video is unrelated to Emote Exchange and must not be used as the project demo. Local simulation recordings must retain the SIM label and must not stand in for the real Twitch walkthroughs.
+The supplied Ion launch video is a style reference only. The new launch cut uses original graphics and Emote Exchange recordings. Local simulation recordings must retain the SIM label and must not stand in for the real Twitch walkthroughs.

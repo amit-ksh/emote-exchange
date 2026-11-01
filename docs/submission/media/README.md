@@ -1,5 +1,13 @@
 # Video assets
 
+## App-only launch video — Sarah
+
+[emote-exchange-teaser.mp4](emote-exchange-teaser.mp4) is the **34-second launch cut**, closer to the Ion reference's pace, with its own [SRT](emote-exchange-teaser.srt) and [edit decisions](teaser-edit.json). It reuses the same Sarah narration and real demo footage.
+
+[emote-exchange-launch.mp4](emote-exchange-launch.mp4) is the owner's revised **1:41** launch-style video. Original animated cream/lime graphics frame actual Twitch-connected OBS clips over a striped background. Separate chapters cover buy, sell, portfolio, check-in/Streaks, Grants, market, top, Coin rewards, controls and Live analytics. The final card lists viewer, broadcaster and moderation commands. There is no build or test-results segment.
+
+[SRT](emote-exchange-launch.srt) · [edit decisions](launch-edit.json) · [poster](launch-poster.png) · [verification](../../verification/v1-launch-video.md). Sarah synthetic narration by ElevenLabs; retain `elevenlabs.io` in the publishing title. The free-plan restrictions in the [publishing notes](../video-publishing.md) apply. No YouTube upload or Devpost submission is claimed.
+
 ## Narrated Twitch demo — November 1
 
 [emote-exchange-devpost.mp4](emote-exchange-devpost.mp4) is the completed **2:05** export: actual Twitch chat commands, dashboard and overlay; labeled SIM footage; actual repository planning/source/review records; ElevenLabs George narration and burned English captions. H.264/yuv420p, 1920×1080 at 30 FPS, AAC stereo 48 kHz, fast-start MP4. No review watermark, music or desktop audio. [SRT captions](emote-exchange-devpost.srt), [edit decisions](devpost-edit.json), [poster](devpost-poster.png).
