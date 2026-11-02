@@ -8,7 +8,17 @@ The market, dashboard controls, greetings and Streaks, broadcaster Grants and Li
 
 *Current production UI with simulated chat and Demo marked Running. These are demo results, not live-channel measurements.*
 
-## Try it in three steps
+## Set up locally
+
+For the complete clone-to-Twitch walkthrough, see [local setup in the repository README](../../README.md#set-up-locally). For a new checkout, install Git, Node 24.22.1 (24.12+ within major 24 is supported), and the pinned package manager:
+
+```sh
+npm install --global pnpm@11.25.0
+git clone https://github.com/amit-ksh/emote-exchange.git
+cd emote-exchange
+```
+
+If you already have a checkout, open its root instead of cloning again. Then:
 
 1. Open a terminal at the **repository root**. Use Node **24.12+ within major 24** and **pnpm 11.25.0**. The workspace provisions Node 24.22.1 for its scripts.
 2. Install and start:
@@ -21,6 +31,8 @@ The market, dashboard controls, greetings and Streaks, broadcaster Grants and Li
 3. Open [the dashboard](http://localhost:4100/), click **Start demo**, then open [the overlay](http://127.0.0.1:4100/overlay). Within a few seconds Opening day begins listing emotes. Leave the terminal running; stop it with Ctrl+C.
 
 No `.env`, Twitch login or internet connection is required for the bundled demo. The app includes 24 original SVG emotes and local fonts. Optional public catalogs refresh in the background and cannot block startup. Installation needs registry access or an already populated package cache.
+
+Local mode creates `apps/emote-exchange/data/emote-exchange.sqlite` automatically and needs no Turso database or hosting account. Leave `DEPLOYMENT_MODE=local` when copying the example environment file. Start with the keyless demo; the optional Twitch setup below adds your own channel.
 
 For production, stop the development process, then run from the repository root:
 
@@ -73,6 +85,30 @@ Catalog search and Show more operate on approved **samples**, not a complete pro
 2. Copy `apps/emote-exchange/.env.example` to `apps/emote-exchange/.env`. Fill `TWITCH_CLIENT_ID` and `TWITCH_CLIENT_SECRET`; keep `.env` private and git-ignored. Restart the app.
 3. In **Setup**, connect the **Broadcaster** and approve `user:read:chat`, `user:write:chat` and `moderator:read:followers`. The optional **Bot** needs `user:write:chat`; use a separate account if you want to trade as the broadcaster, because the connected bot's messages are ignored as self-sent.
 4. Confirm **EventSub connected** and five enabled subscriptions. Send a normal message from another account in the connected channel and check that the live event/chat counters rise.
+
+Create the environment file only if it does not already exist. From the repository root:
+
+```powershell
+# Windows PowerShell
+Copy-Item apps/emote-exchange/.env.example apps/emote-exchange/.env
+```
+
+```sh
+# macOS / Linux
+cp apps/emote-exchange/.env.example apps/emote-exchange/.env
+```
+
+The relevant local settings are:
+
+| Variable | Local value |
+|---|---|
+| `DEPLOYMENT_MODE` | `local` |
+| `PORT` | `4100` |
+| `PUBLIC_ORIGIN` | `http://localhost:4100` |
+| `DATA_DIR` | `./data`, resolved from the app directory |
+| `TWITCH_CLIENT_ID` / `TWITCH_CLIENT_SECRET` | Your own confidential application's values; both may stay empty for demo mode |
+
+The server reads `apps/emote-exchange/.env`, not a root `.env`. Existing terminal environment variables take precedence. If using the same developer application as a hosted deployment, add the local callback alongside the hosted one. Changing the local port also requires a matching `PUBLIC_ORIGIN` and registered callback. Hosted settings such as `TWITCH_OWNER_LOGIN`, `DB_URL` and `TURSO_AUTH_TOKEN` are not required locally.
 
 Under **Chat**, **Send test message** explicitly sends “Emote Exchange connected” through the bot, otherwise the broadcaster. **Preview without sending** only adds a local preview. Quiet mode stops outbound sending and survives restart. Judge a live send by its **Sent** result, not just the button response.
 
