@@ -6,6 +6,8 @@ The owner selected the whole app at `https://emote-exchange.onrender.com`. The s
 
 Hosted HTTPS, owner sign-in, public read-only OBS delivery and Turso storage are implemented. Native SQLite remains the local default. In hosted mode, `DB_URL` and `TURSO_AUTH_TOKEN` select Turso; no Render disk is needed. Multi-streamer account isolation was explicitly deferred until deployment and the new demo are complete.
 
+Verified live November 2, 2026: the selected Render service serves the app, receives Twitch events and sends queued bot replies. Both roles were connected as `ammit_ksh`; an actual viewer buy and Portfolio reply passed. See [the deployed verification](verification/d3-render-turso.md#d33-actual-hosted-deployment-and-twitch-verification). The embedded browser was rejected by Twitch; use a supported regular browser such as Chrome to sign in.
+
 Do not change `DATA_DIR` to temporary storage and claim balances or Twitch tokens are durable. The reported `EACCES: mkdir /var/data/emote-exchange` occurs before HTTP starts; it means that directory is not writable by the deployed process. A Render disk was not verified or attached here.
 
 ## Service settings
@@ -44,7 +46,11 @@ For **Turso**, set `DB_URL` to your database URL (`TURSO_DATABASE_URL` is also s
 
 Register `https://emote-exchange.onrender.com/auth/callback` in the existing confidential Twitch application. Open the service URL and sign in as `ammit_ksh`, then connect the optional bot from Setup. Another Twitch account cannot replace the configured broadcaster in this deployment phase. The dashboard cookie lasts 12 hours and must be renewed after an app restart; persistent game data and Twitch token storage are separate from that browser session.
 
+Use the real existing Twitch client ID and secret, rather than the example placeholders. If Twitch returns `invalid client`, check those two Render variables. A successful Render health check alone cannot validate Twitch credentials.
+
 OBS Browser Source: `https://emote-exchange.onrender.com/overlay`, width 1920, height 1080, transparent background. OBS needs no dashboard cookie. Its public snapshot is `/api/snapshot?client=overlay` and its stream is `/events?client=overlay`. Full snapshots, dashboard SSE, analytics and actions require the owner's cookie. Actions also require exact Origin and `X-CTA: 1`; no CORS exception is used for the old frontend.
+
+“Overlay connected: Waiting” means no overlay browser currently has an active SSE connection. Opening the overlay preview or loading its URL in an active OBS Browser Source changes it to Complete/receiving updates. Opening only the dashboard does not count. This connection check does not certify placement in OBS or that the Twitch stream is live.
 
 Free Render can stop an idle service after 15 minutes and lose local files. While stopped, the market cannot tick or receive Twitch events. Turso retains committed state but cannot keep that process alive. A stable always-running live broadcast requires a host/instance with that guarantee.
 
